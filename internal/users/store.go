@@ -1,36 +1,20 @@
 package users
 
 import (
-	"fmt"
-	"github.com/jmoiron/sqlx"
+	"github.com/google/uuid"
 )
 
-func getUserFromStore(db *sqlx.DB) ([]user, error) {
-	rows, err := db.Query("SELECT (u.id, u.username, r.name) FROM users u INNER JOIN roles r on u.role_id = r.id")
+func (userService *Service) getUserFromStore(id int) (*User, error) {
+	user := &User{}
+	err := userService.DB.Get(user, "SELECT user.id, user.username, role.name as 'role.name', role.id as 'role.id' FROM users user LEFT JOIN roles role on user.role_id = role.id WHERE user.id = ?;", id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query Database: %s", err)
+		return nil, err
 	}
-	defer rows.Close()
-
-	var users []user
-	for rows.Next() {
-		var user user
-		err := rows.Scan(&user)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse user: %s", err)
-		}
-		users = append(users, user)
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse users: %s", err)
-	}
-	return users, nil
+	return user, nil
 }
 
-
-func addUserToStore(db *sqlx.DB, user *user) (*user, error) {
-	result, err := db.Exec("INSERT INTO users (username, role_id) VALUES (?, ?) ", user.Username, user.Role.ID)
+func (userService *Service) addUserToStore(user *User) (*User, error) {
+	result, err := userService.DB.Exec("INSERT INTO users (username, role_id) VALUES (?, ?);", user.Username, user.Role.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +22,29 @@ func addUserToStore(db *sqlx.DB, user *user) (*user, error) {
 	if err != nil {
 		return nil, err
 	}
-	user.ID = id
+	user.ID = int(id)
 
+	return user, nil
+}
+
+func (userService *Service) authenticateUser(id int) (string, error) {
+	token, err := uuid.NewUUID()
+	if err != nil {
+		return "", err
+	}
+	_, err = userService.DB.Query(
+		"INSERT INTO tokens (uuid, user_id, created_date) VALUES (?, (SELECT id FROM users WHERE id = ?), CURRENT_TIME);", token, id)
+	if err != nil {
+		return "", err
+	}
+	return token.String(), nil
+}
+
+func (userService *Service) GetUserFromToken(token string) (*User, error) {
+	user := &User{}
+	err := userService.DB.Get(user, "SELECT user.id, user.username, role.name as 'role.name', role.id as 'role.id' FROM users user INNER JOIN tokens t on user.id = t.user_id LEFT JOIN roles role on user.role_id = role.id WHERE t.uuid = ?;", token)
+	if err != nil {
+		return nil, err
+	}
 	return user, nil
 }

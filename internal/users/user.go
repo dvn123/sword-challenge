@@ -4,55 +4,91 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
-	"log"
+	"go.uber.org/zap"
 	"net/http"
+	"strconv"
+	"sword-challenge/internal/util"
 )
 
-type role struct {
-	ID   string `json:"id"`
+type Role struct {
+	ID   string `json:"id,omitempty"`
 	Name string `json:"name"`
 }
 
-type user struct {
-	ID       int64 `json:"id"`
-	Role     role
+type User struct {
+	ID       int    `json:"id,omitempty"`
+	Role     *Role  `json:"role,omitempty"`
 	Username string `json:"username"`
 }
 
-func Routes(router *gin.RouterGroup, db *sqlx.DB) {
-	router.GET("/users", getUser(db))
-	router.POST("/users", postUser(db))
-
+type Service struct {
+	DB     *sqlx.DB
+	Logger *zap.SugaredLogger
 }
 
-func getUser(db *sqlx.DB) func(c *gin.Context) {
-	return func(c *gin.Context) {
-		users, err := getUserFromStore(db)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, "{}") //todo error object
-			return
-		}
-
-		c.JSON(http.StatusOK, users)
-	}
-
+func NewService(auth *gin.RouterGroup, public *gin.RouterGroup, db *sqlx.DB, logger *zap.SugaredLogger) *Service {
+	service := &Service{DB: db, Logger: logger}
+	auth.GET("/users/:user-id", service.getUser)
+	public.POST("/users", service.createUser)
+	public.POST("/login", service.loginUser)
+	return service
 }
 
-func postUser(db *sqlx.DB) func(c *gin.Context) {
-	return func(c *gin.Context) {
-
-		var user *user
-
-		if err := c.BindJSON(user); err != nil {
-			log.Println(err)
-			return //todo
-		}
-
-		user, err := addUserToStore(db, user)
-		if err != nil {
-			log.Println(err)                             //todo
-			c.JSON(http.StatusInternalServerError, "{}") //todo error object
-		}
-		c.JSON(http.StatusCreated, user)
+func (userService *Service) getUser(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("user-id"))
+	if err != nil {
+		userService.Logger.Errorf("Failed to parse user ID: %v", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
 	}
+
+	authUser, _ := c.Get(util.UserContextKey)
+	_, err = CheckIdsMatchOrIsManager(authUser, id)
+	if err != nil {
+		c.Status(http.StatusForbidden)
+		return
+	}
+
+	users, err := userService.getUserFromStore(id)
+	if err != nil {
+		userService.Logger.Errorf("Failed to get user from storage: %v", err)
+		c.JSON(http.StatusInternalServerError, nil) //todo error object
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
+}
+
+func (userService *Service) getUserByToken(c *gin.Context, token string) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		userService.Logger.Errorf("Failed to parse user ID: %v", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+	users, err := userService.getUserFromStore(id)
+	if err != nil {
+		userService.Logger.Errorf("Failed to get user from storage: %v", err)
+		c.JSON(http.StatusInternalServerError, nil) //todo error object
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
+}
+
+func (userService *Service) createUser(c *gin.Context) {
+	user := &User{}
+
+	if err := c.BindJSON(user); err != nil {
+		userService.Logger.Errorf("Failed to parse user request body: %v", err)
+		return
+	}
+
+	user, err := userService.addUserToStore(user)
+	if err != nil {
+		userService.Logger.Errorf("Failed to add user to storage: %v", err)
+		c.JSON(http.StatusInternalServerError, nil) //todo error object
+		return
+	}
+	c.JSON(http.StatusCreated, user)
 }
