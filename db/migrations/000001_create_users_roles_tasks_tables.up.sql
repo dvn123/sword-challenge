@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS roles
 (
     id   BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL
+    name VARCHAR(255) NOT NULL UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS users
@@ -13,7 +13,9 @@ CREATE TABLE IF NOT EXISTS users
 
 CREATE TABLE IF NOT EXISTS tasks
 (
-    id           BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    user_id      VARCHAR(255) NOT NULL REFERENCES users,
-    created_date TIMESTAMP    NOT NULL
+    id             BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id        VARCHAR(255) NOT NULL REFERENCES users,
+    created_date   TIMESTAMP    NOT NULL,
+    started_date   TIMESTAMP,
+    completed_date TIMESTAMP
 );
