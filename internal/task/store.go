@@ -1,7 +1,7 @@
 package task
 
-func (s *Service) getTaskFromStore(id int) (*task, error) {
-	task := &task{}
+func (s *Service) getTaskFromStore(id int) (*Task, error) {
+	task := &Task{}
 	err := s.db.Get(task, "SELECT t.id, t.created_date, t.started_date, t.completed_date, u.id as 'user.id', u.username as 'user.username' FROM tasks t INNER JOIN users u on t.user_id = u.id WHERE t.id = ?;", id)
 	if err != nil {
 		return nil, err
@@ -9,7 +9,7 @@ func (s *Service) getTaskFromStore(id int) (*task, error) {
 	return task, nil
 }
 
-func (s *Service) addTaskToStore(task *task) (*task, error) {
+func (s *Service) addTaskToStore(task *Task) (*Task, error) {
 	result, err := s.db.Exec("INSERT INTO tasks (user_id, created_date) VALUES (?, ?);", task.User.ID, task.CreatedDate)
 	if err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func (s *Service) addTaskToStore(task *task) (*task, error) {
 	return task, nil
 }
 
-func (s *Service) updateTaskInStore(task *task) (*task, error) {
+func (s *Service) updateTaskInStore(task *Task) (*Task, error) {
 	// use a pointer so it's nullable
 	var userId *int
 	if task.User != nil {

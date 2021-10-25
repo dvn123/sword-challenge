@@ -19,7 +19,8 @@ func TestAuthMiddleware(t *testing.T) {
 		db.Close()
 	})
 	logger := zap.NewNop()
-	server, _ := NewServer(sqlx.NewDb(db, "mysql"), logger.Sugar(), gin.New())
+	sqlxDb := sqlx.NewDb(db, "mysql")
+	server := SwordChallengeServer{db: sqlxDb, logger: logger.Sugar(), userService: &user.Service{DB: sqlxDb}}
 	const expectedSQL = "SELECT user.id, user.username, role.name as 'role.name', role.id as 'role.id' FROM users user INNER JOIN tokens t on user.id = t.user_id LEFT JOIN roles role on user.role_id = role.id WHERE t.uuid = .+;"
 
 	t.Run("shouldReturn401WhenNoTokenIsPresent", func(t *testing.T) {

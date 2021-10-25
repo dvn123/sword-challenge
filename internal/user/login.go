@@ -11,13 +11,13 @@ func (s *Service) loginUser(c *gin.Context) {
 	user := &User{}
 
 	if err := c.BindJSON(user); err != nil {
-		s.Logger.Errorf("Failed to parse user request body: %v", err)
+		s.Logger.Errorw("Failed to parse user request body", "error", err)
 		return
 	}
 
 	token, err := s.authenticateUser(user.ID)
 	if err != nil || token == "" {
-		s.Logger.Errorf("Failed to add user to storage: %v", err)
+		s.Logger.Errorw("Failed to add user to storage", "error", err)
 		c.JSON(http.StatusInternalServerError, nil) //todo error object
 		return
 	}

@@ -39,7 +39,7 @@ func NewService(auth *gin.RouterGroup, public *gin.RouterGroup, db *sqlx.DB, log
 func (s *Service) getUser(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("user-id"))
 	if err != nil {
-		s.Logger.Errorf("Failed to parse user ID: %v", err)
+		s.Logger.Warnw("Failed to parse user ID", "error", err)
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
@@ -53,7 +53,7 @@ func (s *Service) getUser(c *gin.Context) {
 
 	users, err := s.getUserFromStore(id)
 	if err != nil {
-		s.Logger.Errorf("Failed to get user from storage: %v", err)
+		s.Logger.Warnw("Failed to get user from storage", "error", err)
 		c.JSON(http.StatusInternalServerError, nil) //todo error object
 		return
 	}
@@ -64,13 +64,13 @@ func (s *Service) getUser(c *gin.Context) {
 func (s *Service) getUserByToken(c *gin.Context, token string) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		s.Logger.Errorf("Failed to parse user ID: %v", err)
+		s.Logger.Infow("Failed to parse user ID", "error", err)
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
 	users, err := s.getUserFromStore(id)
 	if err != nil {
-		s.Logger.Errorf("Failed to get user from storage: %v", err)
+		s.Logger.Warnw("Failed to get user from storage", "error", err)
 		c.JSON(http.StatusInternalServerError, nil) //todo error object
 		return
 	}
@@ -82,13 +82,13 @@ func (s *Service) createUser(c *gin.Context) {
 	user := &User{}
 
 	if err := c.BindJSON(user); err != nil {
-		s.Logger.Errorf("Failed to parse user request body: %v", err)
+		s.Logger.Infow("Failed to parse user request body", "error", err)
 		return
 	}
 
 	user, err := s.addUserToStore(user)
 	if err != nil {
-		s.Logger.Errorf("Failed to add user to storage: %v", err)
+		s.Logger.Warnw("Failed to add user to storage", "error", err)
 		c.JSON(http.StatusInternalServerError, nil) //todo error object
 		return
 	}
