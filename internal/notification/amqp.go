@@ -59,11 +59,11 @@ func (s *Service) messageHandler(deliveries <-chan amqp.Delivery) {
 
 func (s *Service) Shutdown() error {
 	if err := s.rabbitChannel.Cancel(s.consumerTag, false); err != nil {
-		s.logger.Errorw("Failed to cancel RabbitMQ consumer", "error", err)
+		s.logger.Warnw("Failed to cancel RabbitMQ consumer", "error", err)
 		return err
 	}
 	if err := s.rabbitChannel.Close(); err != nil {
-		s.logger.Errorw("Failed to close RabbitMQ connection", "error", err)
+		s.logger.Warnw("Failed to close RabbitMQ connection", "error", err)
 		return err
 	}
 	<-s.gracefulShutdownChannel
