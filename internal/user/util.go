@@ -1,4 +1,4 @@
-package users
+package user
 
 import (
 	"fmt"
@@ -16,4 +16,13 @@ func CheckIdsMatchOrIsManager(userInterface interface{}, id int) (*User, error) 
 	}
 
 	return currentUser, nil
+}
+
+// Helper for null checking
+func GetIDOrZeroValue(u *User) int {
+	if u == nil {
+		return 0
+	} else {
+		return u.ID
+	}
 }

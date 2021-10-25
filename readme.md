@@ -1,16 +1,27 @@
+# Sword Challenge Server (SCS)
+API for managing Tasks and Users according to provided specification
+
+## API
+
+## Dependencies
+
+## Usage
+
+## Comments
+
 # TODO
 - [x] Docker
 - [x] Setup Migrations
 - [x] Gin Boilerplate
 - [ ] API Errors
 - [ ] Logging
-- [ ] Authentication
+- [x] Authentication
 - [ ] Metrics 
 - [ ] Traces
-- [ ] Healthcheck
-- [ ] Database Seeding
+- [x] Healthcheck
+- [x] Database Seeding
 - [ ] Helm charts
-- [ ] Graceful shutdown
+- [x] Graceful shutdown
 
 # Users
 - [x] API Routes
