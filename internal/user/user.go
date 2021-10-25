@@ -10,14 +10,14 @@ import (
 )
 
 type Role struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name"`
+	ID   string `json:"id,omitempty" binding:"required"`
+	Name string `json:"name" binding:"required"`
 }
 
 type User struct {
-	ID       int    `json:"id,omitempty"`
+	ID       int    `json:"id,omitempty" binding:"required"`
 	Role     *Role  `json:"role,omitempty"`
-	Username string `json:"username"`
+	Username string `json:"username" binding:"required"`
 }
 
 type Service struct {
@@ -25,9 +25,9 @@ type Service struct {
 	Logger *zap.SugaredLogger
 }
 
-func NewService(auth *gin.RouterGroup, public *gin.RouterGroup, db *sqlx.DB, logger *zap.SugaredLogger) *Service {
+func NewService(public *gin.RouterGroup, db *sqlx.DB, logger *zap.SugaredLogger) *Service {
 	service := &Service{DB: db, Logger: logger}
-	usersAPI := auth.Group("")
+	usersAPI := public.Group("")
 	usersAPI.Use(gin.Logger())
 	public.POST("/login", service.loginUser)
 	return service

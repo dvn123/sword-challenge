@@ -41,7 +41,7 @@ func NewServer(db *sqlx.DB, logger *zap.SugaredLogger, router *gin.Engine, rabbi
 		c.Status(http.StatusOK)
 	})
 
-	s.userService = user.NewService(authorizedAPI, publicAPI, db, logger)
+	s.userService = user.NewService(publicAPI, db, logger)
 
 	var pub task.Publisher
 	pub = &LogPublisher{logger: logger}

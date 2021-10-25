@@ -36,7 +36,7 @@ func shouldLoginUser(service *Service, mock sqlmock.Sqlmock) func(t *testing.T) 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 
-		jsonUser, _ := json.Marshal(User{ID: 2})
+		jsonUser, _ := json.Marshal(User{ID: 2, Username: "joao"})
 		req, _ := http.NewRequest(http.MethodPost, "/login", bytes.NewReader(jsonUser))
 		c.Request = req
 
