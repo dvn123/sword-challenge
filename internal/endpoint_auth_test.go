@@ -91,29 +91,12 @@ func makeRequestWithValidTokenAndCheckStatusCode(method string, path string, tok
 			req.Header.Add(util.AuthHeader, token)
 		}
 		if tokenUserID != 0 {
-			req.AddCookie(&http.Cookie{
-				Name:       util.AuthCookie,
-				Value:      token,
-				Path:       "",
-				Domain:     "",
-				Expires:    time.Now().Add(time.Hour),
-				RawExpires: "",
-				MaxAge:     0,
-				Secure:     false,
-				HttpOnly:   false,
-				SameSite:   0,
-				Raw:        "",
-				Unparsed:   nil,
-			})
+			req.AddCookie(&http.Cookie{Name: util.AuthCookie, Value: token, Expires: time.Now().Add(time.Hour)})
 		}
 
 		if tokenUserID != 0 {
 			rows := sqlmock.NewRows([]string{"id", "username", "role.name", "role.id"}).AddRow(tokenUserID, "joao", tokenUserRole, 2)
-
-			mock.ExpectQuery(
-				"SELECT user.id, user.username, role.name as 'role.name', role.id as 'role.id' FROM users user INNER JOIN tokens t on user.id = t.user_id LEFT JOIN roles role on user.role_id = role.id WHERE t.uuid = .;").
-				WithArgs(token).
-				WillReturnRows(rows)
+			mock.ExpectQuery(expectedFetchUserByTokenSQL).WithArgs(token).WillReturnRows(rows)
 		}
 
 		response, err := client.Do(req)
