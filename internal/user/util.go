@@ -7,7 +7,11 @@ import (
 
 var ErrForbidden = fmt.Errorf("IDs do not match")
 
-func CheckIdsMatchOrIsManager(userInterface interface{}, id int) (*User, error) {
+// CheckIdsMatchIfPresentOrIsManager checks whether:
+//	* The ID passed is not the zero value for int and it matches the user ID
+//	* The user is manager
+// This helper was created since this is a common authorization check
+func CheckIdsMatchIfPresentOrIsManager(userInterface interface{}, id int) (*User, error) {
 	currentUser := userInterface.(*User)
 	// Check whether the IDs are the same or the user is a manager
 	// But only if the ID is set, 0 is the zero value for int and we assume we'll never have an ID with this value on the database
@@ -16,13 +20,4 @@ func CheckIdsMatchOrIsManager(userInterface interface{}, id int) (*User, error) 
 	}
 
 	return currentUser, nil
-}
-
-// Helper for null checking
-func GetIDOrZeroValue(u *User) int {
-	if u == nil {
-		return 0
-	} else {
-		return u.ID
-	}
 }

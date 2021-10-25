@@ -10,7 +10,6 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
-	"sword-challenge/internal/util"
 	"testing"
 )
 
@@ -29,71 +28,23 @@ func TestUserHandlers(t *testing.T) {
 		Logger: logger.Sugar(),
 	}
 
-	t.Run("shouldReceiveRequestedUser", shouldReceiveRequestedUser(service, mock))
-	t.Run("shouldCreateRequestedUser", shouldCreateRequestedUser(service, mock))
+	t.Run("shouldLoginUser", shouldLoginUser(service, mock))
 }
 
-func shouldReceiveRequestedUser(service *Service, mock sqlmock.Sqlmock) func(t *testing.T) {
+func shouldLoginUser(service *Service, mock sqlmock.Sqlmock) func(t *testing.T) {
 	return func(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 
-		c.Params = append(c.Params, gin.Param{
-			Key:   "user-id",
-			Value: "1",
-		})
-		c.Set(util.UserContextKey, &User{ID: 1, Role: &Role{Name: "manager"}})
+		jsonUser, _ := json.Marshal(User{ID: 2})
+		req, _ := http.NewRequest(http.MethodPost, "/login", bytes.NewReader(jsonUser))
+		c.Request = req
 
-		rows := sqlmock.NewRows([]string{"id", "username", "role.name", "role.id"}).AddRow(1, "joao", "manager", 2)
+		mock.ExpectExec("INSERT INTO tokens").WillReturnResult(sqlmock.NewResult(0, 1))
 
-		mock.ExpectQuery(
-			"SELECT user.id, user.username, role.name as 'role.name', role.id as 'role.id' FROM users user LEFT JOIN roles role on user.role_id = role.id WHERE user.id = .+").
-			WithArgs(1).
-			WillReturnRows(rows)
-
-		service.getUser(c)
+		service.loginUser(c)
 		c.Writer.Flush()
 
 		assert.Equal(t, 200, w.Code)
-		var userReceived User
-		if err := json.Unmarshal(w.Body.Bytes(), &userReceived); err != nil {
-			t.Fatalf("Failed to parse response body: error: %v", err)
-		}
-		assert.Equal(t, userReceived.ID, 1)
-	}
-}
-
-func shouldCreateRequestedUser(service *Service, mock sqlmock.Sqlmock) func(t *testing.T) {
-	return func(t *testing.T) {
-		w := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(w)
-
-		jsonUser, _ := json.Marshal(User{
-			Username: "ol",
-			Role: &Role{
-				ID: "1",
-			},
-		})
-
-		req, _ := http.NewRequest(http.MethodPost, "/users", bytes.NewReader(jsonUser))
-
-		c.Request = req
-		c.Params = append(c.Params, gin.Param{
-			Key:   "user-id",
-			Value: "1",
-		})
-		c.Set(util.UserContextKey, &User{ID: 1, Role: &Role{Name: "manager"}})
-
-		mock.ExpectExec("INSERT INTO users (.+) VALUES (.+, .+);").WillReturnResult(sqlmock.NewResult(5, 1))
-
-		service.createUser(c)
-		c.Writer.Flush()
-
-		assert.Equal(t, 201, w.Code)
-		var userReceived User
-		if err := json.Unmarshal(w.Body.Bytes(), &userReceived); err != nil {
-			t.Fatalf("Failed to parse response body: error: %v", err)
-		}
-		assert.Equal(t, userReceived.ID, 5)
 	}
 }
