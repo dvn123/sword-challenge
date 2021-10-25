@@ -38,6 +38,7 @@ func TestTaskHandlers(t *testing.T) {
 	t.Run("shouldReceiveRequestedTask", shouldReceiveRequestedTask(service, mock))
 	t.Run("shouldCreateRequestedTask", shouldCreateRequestedTask(service, mock))
 	t.Run("shouldUpdateRequestedTask", shouldUpdateRequestedTask(service, mock))
+	t.Run("shouldDeleteRequestedTask", shouldDeleteRequestedTask(service, mock))
 }
 
 func shouldReceiveRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *testing.T) {
@@ -51,10 +52,10 @@ func shouldReceiveRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *
 		})
 		c.Set(util.UserContextKey, &user.User{ID: 1, Role: &user.Role{Name: "manager"}})
 
-		rows := sqlmock.NewRows([]string{"id", "created_date", "started_date", "completed_date", "user.id", "user.username"}).AddRow(1, nil, nil, nil, 2, "joel")
+		rows := sqlmock.NewRows([]string{"id", "completed_date", "user.id", "user.username"}).AddRow(1, nil, 2, "joel")
 
 		mock.ExpectQuery(
-			"SELECT t.id, t.created_date, t.started_date, t.completed_date, u.id as 'user.id', u.username as 'user.username' FROM tasks t INNER JOIN users u on t.user_id = u.id WHERE t.id = .;").
+			"SELECT t.id, t.completed_date, u.id as 'user.id', u.username as 'user.username' FROM tasks t INNER JOIN users u on t.user_id = u.id WHERE t.id = .+;").
 			WithArgs(1).
 			WillReturnRows(rows)
 
@@ -77,8 +78,6 @@ func shouldCreateRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *t
 
 		jsonTask, _ := json.Marshal(Task{
 			Summary:       "test",
-			CreatedDate:   nil,
-			StartedDate:   nil,
 			CompletedDate: nil,
 			User: &user.User{
 				ID:       1,
@@ -94,7 +93,7 @@ func shouldCreateRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *t
 		})
 		c.Set(util.UserContextKey, &user.User{ID: 1, Role: &user.Role{Name: "manager"}})
 
-		mock.ExpectExec("INSERT INTO tasks (.+) VALUES (.+, .+);").WillReturnResult(sqlmock.NewResult(5, 1))
+		mock.ExpectExec("INSERT INTO tasks (.+) VALUES (.+);").WillReturnResult(sqlmock.NewResult(5, 1))
 
 		service.createTask(c)
 		c.Writer.Flush()
@@ -115,8 +114,6 @@ func shouldUpdateRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *t
 
 		jsonTask, _ := json.Marshal(Task{
 			Summary:       "test",
-			CreatedDate:   nil,
-			StartedDate:   nil,
 			CompletedDate: nil,
 			User: &user.User{
 				ID: 2,
@@ -130,11 +127,11 @@ func shouldUpdateRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *t
 			Value: "1",
 		})
 		c.Set(util.UserContextKey, &user.User{ID: 1, Role: &user.Role{Name: "manager"}})
-		rows := sqlmock.NewRows([]string{"id", "created_date", "started_date", "completed_date", "user.id", "user.username"}).AddRow(1, nil, nil, nil, 1, "joel")
+		rows := sqlmock.NewRows([]string{"id", "completed_date", "user.id", "user.username"}).AddRow(1, nil, 1, "joel")
 
 		mock.ExpectQuery("SELECT").WillReturnRows(rows)
 		mock.ExpectExec("UPDATE").WillReturnResult(sqlmock.NewResult(5, 1))
-		updatedRows := sqlmock.NewRows([]string{"id", "created_date", "started_date", "completed_date", "user.id", "user.username"}).AddRow(1, nil, nil, nil, 5, "joel")
+		updatedRows := sqlmock.NewRows([]string{"id", "completed_date", "user.id", "user.username"}).AddRow(1, nil, 5, "joel")
 		mock.ExpectQuery("SELECT").WillReturnRows(updatedRows)
 
 		service.updateTask(c)
@@ -146,5 +143,28 @@ func shouldUpdateRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *t
 			t.Fatalf("Failed to parse response body: error: %v", err)
 		}
 		assert.Equal(t, taskReceived.User.ID, 5)
+	}
+}
+
+func shouldDeleteRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *testing.T) {
+	return func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+
+		c.Params = append(c.Params, gin.Param{
+			Key:   "task-id",
+			Value: "1",
+		})
+		c.Set(util.UserContextKey, &user.User{ID: 1, Role: &user.Role{Name: "manager"}})
+
+		mock.ExpectExec(
+			"DELETE FROM tasks t WHERE t.id = .+;").
+			WithArgs(1).
+			WillReturnResult(sqlmock.NewResult(0, 1))
+
+		service.deleteTask(c)
+		c.Writer.Flush()
+
+		assert.Equal(t, 200, w.Code)
 	}
 }

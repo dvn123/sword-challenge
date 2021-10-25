@@ -15,7 +15,5 @@ CREATE TABLE IF NOT EXISTS tasks
 (
     id             BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
     user_id        VARCHAR(255) NOT NULL REFERENCES users,
-    created_date   TIMESTAMP    NOT NULL,
-    started_date   TIMESTAMP,
     completed_date TIMESTAMP
 );

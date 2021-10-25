@@ -32,8 +32,8 @@ SET @admin_id = (SELECT id
                 LIMIT 1);
 
 INSERT INTO tasks
-(user_id, created_date) VALUES (@user_id, CURRENT_TIME);
+(user_id)  VALUES (@user_id);
 
 INSERT INTO tasks
-(user_id, created_date) VALUES (@admin_id, CURRENT_TIME);
+(user_id) VALUES (@admin_id);
 
