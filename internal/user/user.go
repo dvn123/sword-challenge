@@ -6,8 +6,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	"net/http"
-	"strconv"
-	"sword-challenge/internal/util"
+	"time"
 )
 
 type Role struct {
@@ -30,55 +29,11 @@ func NewService(auth *gin.RouterGroup, public *gin.RouterGroup, db *sqlx.DB, log
 	service := &Service{DB: db, Logger: logger}
 	usersAPI := auth.Group("")
 	usersAPI.Use(gin.Logger())
-	auth.GET("/users/:user-id", service.getUser)
-	public.POST("/users", service.createUser)
 	public.POST("/login", service.loginUser)
 	return service
 }
 
-func (s *Service) getUser(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("user-id"))
-	if err != nil {
-		s.Logger.Warnw("Failed to parse user ID", "error", err)
-		c.JSON(http.StatusBadRequest, nil)
-		return
-	}
-
-	authUser, _ := c.Get(util.UserContextKey)
-	_, err = CheckIdsMatchOrIsManager(authUser, id)
-	if err != nil {
-		c.Status(http.StatusForbidden)
-		return
-	}
-
-	users, err := s.getUserFromStore(id)
-	if err != nil {
-		s.Logger.Warnw("Failed to get user from storage", "error", err)
-		c.JSON(http.StatusInternalServerError, nil) //todo error object
-		return
-	}
-
-	c.JSON(http.StatusOK, users)
-}
-
-func (s *Service) getUserByToken(c *gin.Context, token string) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		s.Logger.Infow("Failed to parse user ID", "error", err)
-		c.JSON(http.StatusBadRequest, nil)
-		return
-	}
-	users, err := s.getUserFromStore(id)
-	if err != nil {
-		s.Logger.Warnw("Failed to get user from storage", "error", err)
-		c.JSON(http.StatusInternalServerError, nil) //todo error object
-		return
-	}
-
-	c.JSON(http.StatusOK, users)
-}
-
-func (s *Service) createUser(c *gin.Context) {
+func (s *Service) loginUser(c *gin.Context) {
 	user := &User{}
 
 	if err := c.BindJSON(user); err != nil {
@@ -86,11 +41,14 @@ func (s *Service) createUser(c *gin.Context) {
 		return
 	}
 
-	user, err := s.addUserToStore(user)
-	if err != nil {
+	token, err := s.authenticateUser(user.ID)
+	// Here we would handle the error where the user doesn't exist differently, but since this is not a required endpoint for the API...
+	if err != nil || token == "" {
 		s.Logger.Warnw("Failed to add user to storage", "error", err)
-		c.JSON(http.StatusInternalServerError, nil) //todo error object
+		c.Status(http.StatusInternalServerError)
 		return
 	}
-	c.JSON(http.StatusCreated, user)
+
+	c.SetCookie("auth-token", token, int(time.Hour), "/", "localhost", true, true)
+	c.Status(http.StatusOK)
 }

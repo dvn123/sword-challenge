@@ -54,7 +54,7 @@ func (s *Service) getTasks(c *gin.Context) {
 	}
 
 	authUser, _ := c.Get(util.UserContextKey)
-	_, err = user.CheckIdsMatchOrIsManager(authUser, id)
+	_, err = user.CheckIdsMatchIfPresentOrIsManager(authUser, id)
 	if err != nil {
 		c.Status(http.StatusForbidden)
 		return
@@ -72,7 +72,7 @@ func (s *Service) createTask(c *gin.Context) {
 	}
 
 	authUser, _ := c.Get(util.UserContextKey)
-	_, err := user.CheckIdsMatchOrIsManager(authUser, task.User.ID)
+	_, err := user.CheckIdsMatchIfPresentOrIsManager(authUser, task.User.ID)
 	if err != nil {
 		c.Status(http.StatusForbidden)
 		return
@@ -102,8 +102,12 @@ func (s *Service) updateTask(c *gin.Context) {
 	}
 	receivedTask.ID = id
 
+	// So we don't have a null pointer
+	if receivedTask.User == nil {
+		receivedTask.User = &user.User{ID: 0}
+	}
 	authUser, _ := c.Get(util.UserContextKey)
-	currentUser, err := user.CheckIdsMatchOrIsManager(authUser, user.GetIDOrZeroValue(receivedTask.User))
+	currentUser, err := user.CheckIdsMatchIfPresentOrIsManager(authUser, receivedTask.User.ID)
 	if err != nil {
 		c.Status(http.StatusForbidden)
 		return
