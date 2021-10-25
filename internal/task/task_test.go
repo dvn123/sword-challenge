@@ -115,9 +115,7 @@ func shouldUpdateRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *t
 		jsonTask, _ := json.Marshal(Task{
 			Summary:       "test",
 			CompletedDate: nil,
-			User: &user.User{
-				ID: 2,
-			},
+			User:          &user.User{ID: 2, Username: "o"},
 		})
 		req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(jsonTask))
 

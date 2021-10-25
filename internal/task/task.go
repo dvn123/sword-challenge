@@ -14,7 +14,7 @@ import (
 
 type Task struct {
 	ID            int        `json:"id,omitempty"`
-	Summary       string     `json:"summary,omitempty"`
+	Summary       string     `json:"summary,omitempty" binding:"required"`
 	CompletedDate *time.Time `json:"completedDate" db:"completed_date"`
 	User          *user.User `json:"user,omitempty"`
 }
@@ -34,7 +34,7 @@ func NewService(router *gin.RouterGroup, userService *user.Service, db *sqlx.DB,
 	taskService := &Service{userService: userService, db: db, taskPublisher: taskPublisher, logger: logger}
 	router.GET("/tasks/:task-id", taskService.getTasks)
 	router.PUT("/tasks/:task-id", taskService.updateTask)
-	router.DELETE("/tasks/:task-id", taskService.updateTask)
+	router.DELETE("/tasks/:task-id", taskService.deleteTask)
 	router.POST("/tasks", taskService.createTask)
 	return taskService
 }
@@ -54,7 +54,7 @@ func (s *Service) getTasks(c *gin.Context) {
 	}
 
 	authUser, _ := c.Get(util.UserContextKey)
-	_, err = user.CheckIdsMatchIfPresentOrIsManager(authUser, id)
+	_, err = user.CheckIdsMatchIfPresentOrIsManager(authUser, &id)
 	if err != nil {
 		c.Status(http.StatusForbidden)
 		return
@@ -64,27 +64,33 @@ func (s *Service) getTasks(c *gin.Context) {
 }
 
 func (s *Service) createTask(c *gin.Context) {
-	task := &Task{}
-
-	if err := c.BindJSON(task); err != nil {
+	receivedTask := &Task{}
+	if err := c.BindJSON(receivedTask); err != nil {
 		s.logger.Infow("Failed to parse task request body", "error", err)
 		return
 	}
 
 	authUser, _ := c.Get(util.UserContextKey)
-	_, err := user.CheckIdsMatchIfPresentOrIsManager(authUser, task.User.ID)
+
+	var userId *int
+	if receivedTask.User != nil {
+		userId = &receivedTask.User.ID
+	} else {
+		userId = nil
+	}
+	_, err := user.CheckIdsMatchIfPresentOrIsManager(authUser, userId)
 	if err != nil {
 		c.Status(http.StatusForbidden)
 		return
 	}
 
-	task, err = s.addTaskToStore(task)
+	receivedTask, err = s.addTaskToStore(receivedTask)
 	if err != nil {
 		s.logger.Warnw("Failed to add task to storage", "error", err)
 		c.JSON(http.StatusInternalServerError, nil) //todo error object
 		return
 	}
-	c.JSON(http.StatusCreated, task)
+	c.JSON(http.StatusCreated, receivedTask)
 }
 
 func (s *Service) updateTask(c *gin.Context) {
@@ -102,12 +108,15 @@ func (s *Service) updateTask(c *gin.Context) {
 	}
 	receivedTask.ID = id
 
-	// So we don't have a null pointer
-	if receivedTask.User == nil {
-		receivedTask.User = &user.User{ID: 0}
-	}
 	authUser, _ := c.Get(util.UserContextKey)
-	currentUser, err := user.CheckIdsMatchIfPresentOrIsManager(authUser, receivedTask.User.ID)
+	// So we don't have a null pointer
+	var userId *int
+	if receivedTask.User != nil {
+		userId = &receivedTask.User.ID
+	} else {
+		userId = nil
+	}
+	currentUser, err := user.CheckIdsMatchIfPresentOrIsManager(authUser, userId)
 	if err != nil {
 		c.Status(http.StatusForbidden)
 		return
