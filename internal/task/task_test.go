@@ -1,4 +1,4 @@
-package tasks
+package task
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
-	"sword-challenge/internal/users"
+	"sword-challenge/internal/user"
 	"sword-challenge/internal/util"
 	"testing"
 )
@@ -24,15 +24,15 @@ func TestTaskHandlers(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 
 	sqlxDb := sqlx.NewDb(db, "mysql")
-	userService := &users.Service{
+	userService := &user.Service{
 		DB:     sqlxDb,
 		Logger: logger.Sugar(),
 	}
 
 	service := &Service{
-		DB:          sqlxDb,
-		Logger:      logger.Sugar(),
-		UserService: userService,
+		db:          sqlxDb,
+		logger:      logger.Sugar(),
+		userService: userService,
 	}
 
 	t.Run("shouldReceiveRequestedTask", shouldReceiveRequestedTask(service, mock))
@@ -49,7 +49,7 @@ func shouldReceiveRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *
 			Key:   "task-id",
 			Value: "1",
 		})
-		c.Set(util.UserContextKey, &users.User{ID: 1, Role: &users.Role{Name: "manager"}})
+		c.Set(util.UserContextKey, &user.User{ID: 1, Role: &user.Role{Name: "manager"}})
 
 		rows := sqlmock.NewRows([]string{"id", "created_date", "started_date", "completed_date", "user.id", "user.username"}).AddRow(1, nil, nil, nil, 2, "joel")
 
@@ -80,7 +80,7 @@ func shouldCreateRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *t
 			CreatedDate:   nil,
 			StartedDate:   nil,
 			CompletedDate: nil,
-			User: &users.User{
+			User: &user.User{
 				ID:       1,
 				Username: "ol",
 			},
@@ -92,7 +92,7 @@ func shouldCreateRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *t
 			Key:   "task-id",
 			Value: "1",
 		})
-		c.Set(util.UserContextKey, &users.User{ID: 1, Role: &users.Role{Name: "manager"}})
+		c.Set(util.UserContextKey, &user.User{ID: 1, Role: &user.Role{Name: "manager"}})
 
 		mock.ExpectExec("INSERT INTO tasks (.+) VALUES (.+, .+);").WillReturnResult(sqlmock.NewResult(5, 1))
 
@@ -118,7 +118,7 @@ func shouldUpdateRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *t
 			CreatedDate:   nil,
 			StartedDate:   nil,
 			CompletedDate: nil,
-			User: &users.User{
+			User: &user.User{
 				ID: 2,
 			},
 		})
@@ -129,7 +129,7 @@ func shouldUpdateRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *t
 			Key:   "task-id",
 			Value: "1",
 		})
-		c.Set(util.UserContextKey, &users.User{ID: 1, Role: &users.Role{Name: "manager"}})
+		c.Set(util.UserContextKey, &user.User{ID: 1, Role: &user.Role{Name: "manager"}})
 		rows := sqlmock.NewRows([]string{"id", "created_date", "started_date", "completed_date", "user.id", "user.username"}).AddRow(1, nil, nil, nil, 1, "joel")
 
 		mock.ExpectQuery("SELECT").WillReturnRows(rows)

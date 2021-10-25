@@ -25,5 +25,4 @@ func (s *SwordChallengeServer) requireAuthentication(c *gin.Context) {
 	}
 
 	c.Set(util.UserContextKey, user)
-
 }

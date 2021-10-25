@@ -8,87 +8,73 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
+	"sword-challenge/internal/user"
 	"sword-challenge/internal/util"
 	"testing"
-	"time"
 )
 
-func TestAuth2(t *testing.T) {
-	w := httptest.NewRecorder()
-	c, e := gin.CreateTestContext(w)
-	db, _, _ := sqlmock.New()
+func TestAuthMiddleware(t *testing.T) {
+	db, mock, _ := sqlmock.New()
 	t.Cleanup(func() {
 		db.Close()
 	})
+	logger := zap.NewNop()
+	server, _ := NewServer(sqlx.NewDb(db, "mysql"), logger.Sugar(), gin.New())
+	const expectedSQL = "SELECT user.id, user.username, role.name as 'role.name', role.id as 'role.id' FROM users user INNER JOIN tokens t on user.id = t.user_id LEFT JOIN roles role on user.role_id = role.id WHERE t.uuid = .+;"
 
-	u, _ := url.Parse("http://localhost:8080/v1/tasks/1")
-	req := &http.Request{
-		URL:    u,
-		Header: make(http.Header),
-	}
-	c.Request = req
-	//c.Params = append(c.Params, gin.Param{Key: "task-id", Value: "1"})
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		t.Fatal(err)
-	}
-	server, err := NewServer(sqlx.NewDb(db, "mysql"), logger.Sugar(), e)
-	if err != nil {
-		t.Fatal(err)
-	}
-	server.requireAuthentication(c)
-	c.Writer.Flush()
+	t.Run("shouldReturn401WhenNoTokenIsPresent", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/tasks/1", nil)
 
-	assert.Equal(t, 401, w.Code)
-}
+		c.Request = req
 
-func makeRequestWithValidTokenAndCheckStatusCode2(method string, path string, token string, expectedStatus int, s *httptest.Server, mock sqlmock.Sqlmock) func(t *testing.T) {
-	return func(t *testing.T) {
-		client := &http.Client{}
-		req, _ := http.NewRequest(
-			method,
-			s.URL+path,
-			nil,
-		)
-		if token != "" {
-			req.Header.Add(util.AuthHeader, token)
-		}
-		if token != "" {
-			req.AddCookie(&http.Cookie{
-				Name:       util.AuthCookie,
-				Value:      token,
-				Path:       "",
-				Domain:     "",
-				Expires:    time.Now().Add(time.Hour),
-				RawExpires: "",
-				MaxAge:     0,
-				Secure:     false,
-				HttpOnly:   false,
-				SameSite:   0,
-				Raw:        "",
-				Unparsed:   nil,
-			})
-		}
+		server.requireAuthentication(c)
+		c.Writer.Flush()
 
-		if token != "" {
-			mockTokenInDatabase(mock, token, "manager")
-		}
+		assert.Equal(t, 401, w.Code)
+	})
 
-		get, err := client.Do(req)
-		if err != nil {
-			t.Fatal(err)
-		}
+	t.Run("shouldReturn401WhenTokenExistsButNotFoundInStorage", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/tasks/1", nil)
+		token := "123"
+		req.AddCookie(&http.Cookie{Name: util.AuthCookie, Value: token})
+		c.Request = req
+		mock.ExpectQuery(
+			expectedSQL).
+			WithArgs(token).
+			WillReturnError(nil)
 
-		assert.Equal(t, expectedStatus, get.StatusCode)
-	}
-}
+		server.requireAuthentication(c)
+		c.Writer.Flush()
 
-func mockTokenInDatabase(mock sqlmock.Sqlmock, token string, role string) {
-	rows := sqlmock.NewRows([]string{"id", "username", "role.name", "role.id"}).AddRow(1, "joao", role, 2)
+		assert.Equal(t, 401, w.Code)
+	})
 
-	mock.ExpectQuery(
-		"SELECT user.id, user.username, role.name as 'role.name', role.id as 'role.id' FROM users user INNER JOIN tokens t on user.id = t.user_id LEFT JOIN roles role on user.role_id = role.id WHERE t.uuid = .;").
-		WithArgs(token).
-		WillReturnRows(rows)
+	t.Run("shouldSetUserInContextIfTokenIsValid", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/tasks/1", nil)
+		token := "1234"
+		role := "manager"
+		id := 1
+		req.Header.Add(util.AuthHeader, token)
+		c.Request = req
+
+		rows := sqlmock.NewRows([]string{"id", "username", "role.name", "role.id"}).AddRow(id, "joao", role, 2)
+
+		mock.ExpectQuery(
+			expectedSQL).
+			WithArgs(token).
+			WillReturnRows(rows)
+
+		server.requireAuthentication(c)
+		c.Writer.Flush()
+
+		actualUser := c.MustGet(util.UserContextKey).(*user.User)
+		assert.Equal(t, actualUser.ID, 1)
+		assert.Equal(t, actualUser.Role.Name, role)
+	})
 }

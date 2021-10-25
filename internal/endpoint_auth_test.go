@@ -23,7 +23,7 @@ func TestAuth(t *testing.T) {
 	logger := zap.NewNop()
 	router := gin.Default()
 
-	server, err := NewServer(sqlx.NewDb(db, "mysql"), logger.Sugar(), router)
+	server, err := NewServer(sqlx.NewDb(db, "mysql"), logger.Sugar(), router, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

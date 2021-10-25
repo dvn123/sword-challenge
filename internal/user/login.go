@@ -1,4 +1,4 @@
-package users
+package user
 
 import (
 	"github.com/gin-gonic/gin"
@@ -7,17 +7,17 @@ import (
 	"time"
 )
 
-func (userService *Service) loginUser(c *gin.Context) {
+func (s *Service) loginUser(c *gin.Context) {
 	user := &User{}
 
 	if err := c.BindJSON(user); err != nil {
-		userService.Logger.Errorf("Failed to parse user request body: %v", err)
+		s.Logger.Errorf("Failed to parse user request body: %v", err)
 		return
 	}
 
-	token, err := userService.authenticateUser(user.ID)
+	token, err := s.authenticateUser(user.ID)
 	if err != nil || token == "" {
-		userService.Logger.Errorf("Failed to add user to storage: %v", err)
+		s.Logger.Errorf("Failed to add user to storage: %v", err)
 		c.JSON(http.StatusInternalServerError, nil) //todo error object
 		return
 	}
