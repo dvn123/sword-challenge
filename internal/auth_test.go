@@ -13,15 +13,16 @@ import (
 	"testing"
 )
 
+const expectedFetchUserByTokenSQL = "SELECT u.id, u.username, r.name as 'role.name', r.id as 'role.id' FROM users u INNER JOIN tokens t on u.id = t.user_id LEFT JOIN roles r on u.role_id = r.id WHERE t.uuid = .+;"
+
 func TestAuthMiddleware(t *testing.T) {
 	db, mock, _ := sqlmock.New()
 	t.Cleanup(func() {
 		db.Close()
 	})
-	logger := zap.NewNop()
+	logger, _ := zap.NewDevelopment()
 	sqlxDb := sqlx.NewDb(db, "mysql")
 	server := SwordChallengeServer{db: sqlxDb, logger: logger.Sugar(), userService: &user.Service{DB: sqlxDb}}
-	const expectedSQL = "SELECT user.id, user.username, role.name as 'role.name', role.id as 'role.id' FROM users user INNER JOIN tokens t on user.id = t.user_id LEFT JOIN roles role on user.role_id = role.id WHERE t.uuid = .+;"
 
 	t.Run("shouldReturn401WhenNoTokenIsPresent", func(t *testing.T) {
 		w := httptest.NewRecorder()
@@ -44,7 +45,7 @@ func TestAuthMiddleware(t *testing.T) {
 		req.AddCookie(&http.Cookie{Name: util.AuthCookie, Value: token})
 		c.Request = req
 		mock.ExpectQuery(
-			expectedSQL).
+			expectedFetchUserByTokenSQL).
 			WithArgs(token).
 			WillReturnError(nil)
 
@@ -67,7 +68,7 @@ func TestAuthMiddleware(t *testing.T) {
 		rows := sqlmock.NewRows([]string{"id", "username", "role.name", "role.id"}).AddRow(id, "joao", role, 2)
 
 		mock.ExpectQuery(
-			expectedSQL).
+			expectedFetchUserByTokenSQL).
 			WithArgs(token).
 			WillReturnRows(rows)
 

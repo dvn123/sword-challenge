@@ -1,9 +1,11 @@
 package notification
 
 import (
+	"encoding/json"
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
+	"sword-challenge/internal/task"
 )
 
 type Service struct {
@@ -14,15 +16,15 @@ type Service struct {
 	gracefulShutdownChannel chan error
 }
 
-func NewService(rabbitChannel *amqp.Channel, logger *zap.SugaredLogger) (*Service, error) {
+func NewService(rabbitChannel *amqp.Channel, logger *zap.SugaredLogger, queueName string) (*Service, error) {
 	s := &Service{rabbitChannel: rabbitChannel, logger: logger}
 	queue, err := rabbitChannel.QueueDeclare(
-		"tasks", // name of the queue
-		true,    // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // noWait
-		nil,     // arguments
+		queueName, // name of the queue
+		true,      // durable
+		false,     // delete when unused
+		false,     // exclusive
+		false,     // noWait
+		nil,       // arguments
 	)
 	s.consumerTag = "sword-challenge-server-" + uuid.New().String()
 
@@ -47,7 +49,13 @@ func (s *Service) StartConsumer() {
 func (s *Service) messageHandler(deliveries <-chan amqp.Delivery) {
 	s.logger.Infow("Started notifications consumer", "consumerTag", s.consumerTag)
 	for d := range deliveries {
-		s.logger.Infof("The tech %s performed the task %s on date %s", len(d.Body), d.DeliveryTag, d.Body) //TODO
+		var t task.NotificationTask
+		err := json.Unmarshal(d.Body, &t)
+		if err != nil {
+			s.logger.Warnw("Failed to parse notification body to task", "error", err)
+		} else {
+			s.logger.Infof("%s: The tech %s performed the task %d on date %s", t.Manager, t.User.Username, t.ID, t.CompletedDate)
+		}
 
 		if err := d.Ack(false); err != nil {
 			s.logger.Warnw("Failed to acknowledge message", "messageId", d.MessageId, "consumerTag", s.consumerTag)

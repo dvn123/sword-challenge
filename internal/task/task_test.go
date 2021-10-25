@@ -63,7 +63,7 @@ func shouldReceiveRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *
 		c.Writer.Flush()
 
 		assert.Equal(t, 200, w.Code)
-		var taskReceived Task
+		var taskReceived task
 		if err := json.Unmarshal(w.Body.Bytes(), &taskReceived); err != nil {
 			t.Fatalf("Failed to parse response body: error: %v", err)
 		}
@@ -76,7 +76,7 @@ func shouldCreateRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *t
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 
-		jsonTask, _ := json.Marshal(Task{
+		jsonTask, _ := json.Marshal(task{
 			Summary:       "test",
 			CompletedDate: nil,
 			User: &user.User{
@@ -99,7 +99,7 @@ func shouldCreateRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *t
 		c.Writer.Flush()
 
 		assert.Equal(t, 201, w.Code)
-		var taskReceived Task
+		var taskReceived task
 		if err := json.Unmarshal(w.Body.Bytes(), &taskReceived); err != nil {
 			t.Fatalf("Failed to parse response body: error: %v", err)
 		}
@@ -112,7 +112,7 @@ func shouldUpdateRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *t
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 
-		jsonTask, _ := json.Marshal(Task{
+		jsonTask, _ := json.Marshal(task{
 			Summary:       "test",
 			CompletedDate: nil,
 			User:          &user.User{ID: 2, Username: "o"},
@@ -136,7 +136,7 @@ func shouldUpdateRequestedTask(service *Service, mock sqlmock.Sqlmock) func(t *t
 		c.Writer.Flush()
 
 		assert.Equal(t, 200, w.Code)
-		var taskReceived Task
+		var taskReceived task
 		if err := json.Unmarshal(w.Body.Bytes(), &taskReceived); err != nil {
 			t.Fatalf("Failed to parse response body: error: %v", err)
 		}

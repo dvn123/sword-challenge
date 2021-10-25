@@ -16,7 +16,7 @@ func (s *SwordChallengeServer) requireAuthentication(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	user, err := s.userService.GetUserFromToken(token)
+	user, err := s.userService.GetUserByToken(token)
 	if err != nil {
 		s.logger.Warnw("Failed to get user from token", "error", err)
 		c.Status(http.StatusUnauthorized)

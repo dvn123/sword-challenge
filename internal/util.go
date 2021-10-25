@@ -9,6 +9,6 @@ type LogPublisher struct {
 	logger *zap.SugaredLogger
 }
 
-func (r *LogPublisher) PublishTask(t task.Task) {
+func (r *LogPublisher) PublishTask(t task.NotificationTask) {
 	r.logger.Infow("Task published by LogPublisher", "taskId", t.ID)
 }

@@ -1,29 +1,36 @@
 package notification
 
 import (
+	"encoding/json"
+	"github.com/gin-gonic/gin"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 	"sword-challenge/internal/task"
 )
 
 type RabbitPublisher struct {
-	RabbitChannel *amqp.Channel
-	Logger        *zap.SugaredLogger
+	RabbitChannel      *amqp.Channel
+	Logger             *zap.SugaredLogger
+	NotificationsQueue string
 }
 
-func (r *RabbitPublisher) PublishTask(t task.Task) {
+func (r *RabbitPublisher) PublishTask(t task.NotificationTask) {
+	jsonTask, err := json.Marshal(t)
+	if err != nil {
+		r.Logger.Warnw("Failed to marshal task to JSON when sending notification", "error", err)
+	}
 	if err := r.RabbitChannel.Publish(
-		"",      // publish to an exchange
-		"tasks", // routing to 0 or more queues todo
-		false,   // mandatory
-		false,   // immediate
+		"",
+		r.NotificationsQueue,
+		false,
+		false,
 		amqp.Publishing{
 			Headers:         amqp.Table{},
-			ContentType:     "text/plain",
+			ContentType:     gin.MIMEJSON,
 			ContentEncoding: "",
-			Body:            []byte(t.CompletedDate.String()),
-			DeliveryMode:    amqp.Transient, // 1=non-persistent, 2=persistent
-			Priority:        0,              // 0-9
+			Body:            jsonTask,
+			DeliveryMode:    amqp.Transient,
+			Priority:        0,
 		},
 	); err != nil {
 		r.Logger.Warnw("Failed to publish task completion notification", "error", err)

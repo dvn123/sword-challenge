@@ -12,8 +12,8 @@ func (s *Service) deleteTaskFromStore(id int) (int, error) {
 	return int(affected), nil
 }
 
-func (s *Service) getTaskFromStore(id int) (*Task, error) {
-	task := &Task{}
+func (s *Service) getTaskFromStore(id int) (*task, error) {
+	task := &task{}
 	err := s.db.Get(task, "SELECT t.id, t.completed_date, u.id as 'user.id', u.username as 'user.username' FROM tasks t INNER JOIN users u on t.user_id = u.id WHERE t.id = ?;", id)
 	if err != nil {
 		return nil, err
@@ -21,7 +21,7 @@ func (s *Service) getTaskFromStore(id int) (*Task, error) {
 	return task, nil
 }
 
-func (s *Service) addTaskToStore(task *Task) (*Task, error) {
+func (s *Service) addTaskToStore(task *task) (*task, error) {
 	result, err := s.db.Exec("INSERT INTO tasks (user_id) VALUES (?);", task.User.ID)
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (s *Service) addTaskToStore(task *Task) (*Task, error) {
 	return task, nil
 }
 
-func (s *Service) updateTaskInStore(task *Task) (*Task, error) {
+func (s *Service) updateTaskInStore(task *task) (*task, error) {
 	// use a pointer so it's nullable
 	var userId *int
 	if task.User != nil {

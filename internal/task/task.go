@@ -3,8 +3,6 @@ package task
 import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/jmoiron/sqlx"
-	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"sword-challenge/internal/user"
@@ -12,31 +10,18 @@ import (
 	"time"
 )
 
-type Task struct {
+type task struct {
 	ID            int        `json:"id,omitempty"`
 	Summary       string     `json:"summary,omitempty" binding:"required"`
 	CompletedDate *time.Time `json:"completedDate" db:"completed_date"`
 	User          *user.User `json:"user,omitempty"`
 }
 
-type Service struct {
-	db            *sqlx.DB
-	logger        *zap.SugaredLogger
-	userService   *user.Service
-	taskPublisher Publisher
-}
-
-type Publisher interface {
-	PublishTask(task Task)
-}
-
-func NewService(router *gin.RouterGroup, userService *user.Service, db *sqlx.DB, taskPublisher Publisher, logger *zap.SugaredLogger) *Service {
-	taskService := &Service{userService: userService, db: db, taskPublisher: taskPublisher, logger: logger}
-	router.GET("/tasks/:task-id", taskService.getTasks)
-	router.PUT("/tasks/:task-id", taskService.updateTask)
-	router.DELETE("/tasks/:task-id", taskService.deleteTask)
-	router.POST("/tasks", taskService.createTask)
-	return taskService
+type NotificationTask struct {
+	ID            int        `json:"id" binding:"required"`
+	Manager       string     `json:"manager" binding:"required"`
+	CompletedDate *time.Time `json:"completedDate" binding:"required"`
+	User          *user.User `json:"user" binding:"required"`
 }
 
 func (s *Service) getTasks(c *gin.Context) {
@@ -64,7 +49,7 @@ func (s *Service) getTasks(c *gin.Context) {
 }
 
 func (s *Service) createTask(c *gin.Context) {
-	receivedTask := &Task{}
+	receivedTask := &task{}
 	if err := c.BindJSON(receivedTask); err != nil {
 		s.logger.Infow("Failed to parse task request body", "error", err)
 		return
@@ -94,7 +79,7 @@ func (s *Service) createTask(c *gin.Context) {
 }
 
 func (s *Service) updateTask(c *gin.Context) {
-	receivedTask := &Task{}
+	receivedTask := &task{}
 	id, err := strconv.Atoi(c.Param("task-id"))
 	if err != nil {
 		s.logger.Infow("Failed to parse task ID", "error", err)
@@ -148,7 +133,19 @@ func (s *Service) updateTask(c *gin.Context) {
 	}
 
 	if taskToUpdate.CompletedDate == nil && updatedTask.CompletedDate != nil {
-		go s.taskPublisher.PublishTask(*updatedTask)
+		go func(t task) {
+			users, err := s.userService.GetUsersByRole(util.AdminRole)
+			if err != nil {
+				s.logger.Warnw("Failed to get users by role when sending notification", "error", err)
+				return
+			}
+
+			for _, u := range users {
+				u := u
+				s.taskPublisher.PublishTask(NotificationTask{ID: t.ID, Manager: u.Username, CompletedDate: t.CompletedDate, User: t.User})
+			}
+
+		}(*updatedTask)
 	}
 	c.JSON(http.StatusOK, updatedTask)
 }
@@ -163,7 +160,7 @@ func (s *Service) deleteTask(c *gin.Context) {
 
 	authUser, _ := c.Get(util.UserContextKey)
 	currentUser := authUser.(*user.User)
-	if currentUser.Role.Name != "manager" {
+	if currentUser.Role.Name != util.AdminRole {
 		c.Status(http.StatusForbidden)
 		return
 	}

@@ -46,12 +46,12 @@ func NewServer(db *sqlx.DB, logger *zap.SugaredLogger, router *gin.Engine, rabbi
 	var pub task.Publisher
 	pub = &LogPublisher{logger: logger}
 	if rabbitCh != nil {
-		not, err := notification.NewService(rabbitCh, logger)
+		not, err := notification.NewService(rabbitCh, logger, "tasks")
 		if err != nil {
 			return nil, err
 		}
 		s.notificationService = not
-		pub = &notification.RabbitPublisher{RabbitChannel: rabbitCh, Logger: logger}
+		pub = &notification.RabbitPublisher{RabbitChannel: rabbitCh, Logger: logger, NotificationsQueue: "tasks"}
 	}
 	s.tasksService = task.NewService(authorizedAPI, s.userService, db, pub, logger)
 
