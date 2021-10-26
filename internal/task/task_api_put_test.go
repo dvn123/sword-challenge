@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func (s *TaskTestSuite) TestUpdateRequestedTaskFailureWhenFetchingTaskFromTheDatabase() {
+func (s *TaskAPITestSuite) TestUpdateTaskFailureWhenFetchingTaskFromTheDatabase() {
 	jsonTask, _ := json.Marshal(task{Summary: "test", CompletedDate: nil, User: &user.User{ID: 2, Username: "o"}})
 	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(jsonTask))
 
@@ -29,14 +29,14 @@ func (s *TaskTestSuite) TestUpdateRequestedTaskFailureWhenFetchingTaskFromTheDat
 	assert.Equal(s.T(), 500, s.w.Code)
 }
 
-func (s *TaskTestSuite) TestUpdateRequestedTaskWhenTaskDoesntExist() {
+func (s *TaskAPITestSuite) TestUpdatTaskWhenTaskDoesntExist() {
 	jsonTask, _ := json.Marshal(task{Summary: "test", CompletedDate: nil, User: &user.User{ID: 2, Username: "o"}})
 	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(jsonTask))
 
 	s.c.Request = req
 	s.c.Params = append(s.c.Params, validTaskId)
 	s.c.Set(util.UserContextKey, &user.User{ID: 1, Role: &user.Role{Name: "manager"}})
-	rows := sqlmock.NewRows(getTaskColumns)
+	rows := sqlmock.NewRows(taskColumns)
 	s.sqlmock.ExpectQuery(getTaskSQL).WillReturnRows(rows)
 
 	s.service.updateTask(s.c)
@@ -45,14 +45,14 @@ func (s *TaskTestSuite) TestUpdateRequestedTaskWhenTaskDoesntExist() {
 	assert.Equal(s.T(), 404, s.w.Code)
 }
 
-func (s *TaskTestSuite) TestUpdateRequestedTaskWhenTaskExistsButDoesntBelongToNonAdminUser() {
+func (s *TaskAPITestSuite) TestUpdateTaskWhenTaskExistsButDoesntBelongToNonAdminUser() {
 	jsonTask, _ := json.Marshal(task{Summary: "test", CompletedDate: nil, User: &user.User{ID: 1, Username: "o"}})
 	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(jsonTask))
 
 	s.c.Request = req
 	s.c.Params = append(s.c.Params, validTaskId)
 	s.c.Set(util.UserContextKey, &user.User{ID: 1, Role: &user.Role{Name: "technician"}})
-	rows := sqlmock.NewRows(getTaskColumns).AddRow(1, "1", nil, 2, "joel")
+	rows := sqlmock.NewRows(taskColumns).AddRow(1, "1", nil, 2, "joel")
 	s.sqlmock.ExpectQuery(getTaskSQL).WillReturnRows(rows)
 
 	s.service.updateTask(s.c)
@@ -61,7 +61,7 @@ func (s *TaskTestSuite) TestUpdateRequestedTaskWhenTaskExistsButDoesntBelongToNo
 	assert.Equal(s.T(), 403, s.w.Code)
 }
 
-func (s *TaskTestSuite) TestUpdateRequestedTaskFailToUpdateTask() {
+func (s *TaskAPITestSuite) TestUpdateTaskFailToUpdateTask() {
 	t := time.Date(2011, 1, 1, 1, 1, 1, 1, time.UTC)
 	jsonTask, _ := json.Marshal(task{Summary: "test", CompletedDate: &t, User: &user.User{ID: 2, Username: "o"}})
 	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(jsonTask))
@@ -69,7 +69,7 @@ func (s *TaskTestSuite) TestUpdateRequestedTaskFailToUpdateTask() {
 	s.c.Request = req
 	s.c.Params = append(s.c.Params, gin.Param{Key: "task-id", Value: "1"})
 	s.c.Set(util.UserContextKey, &user.User{ID: 1, Role: &user.Role{Name: "manager"}})
-	rows := sqlmock.NewRows(getTaskColumns).AddRow(1, "1", nil, 1, "joel")
+	rows := sqlmock.NewRows(taskColumns).AddRow(1, "1", nil, 1, "joel")
 
 	s.sqlmock.ExpectQuery(getTaskSQL).WillReturnRows(rows)
 	s.sqlmock.ExpectExec(updateTaskSQL).WillReturnError(fmt.Errorf("a"))
@@ -80,7 +80,7 @@ func (s *TaskTestSuite) TestUpdateRequestedTaskFailToUpdateTask() {
 	assert.Equal(s.T(), 500, s.w.Code)
 }
 
-func (s *TaskTestSuite) TestUpdateRequestedTaskSuccess() {
+func (s *TaskAPITestSuite) TestUpdateTaskSuccess() {
 	t := time.Date(2011, 1, 1, 1, 1, 1, 1, time.UTC)
 	jsonTask, _ := json.Marshal(task{Summary: "test", CompletedDate: &t, User: &user.User{ID: 2, Username: "o"}})
 	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(jsonTask))
@@ -88,11 +88,11 @@ func (s *TaskTestSuite) TestUpdateRequestedTaskSuccess() {
 	s.c.Request = req
 	s.c.Params = append(s.c.Params, gin.Param{Key: "task-id", Value: "1"})
 	s.c.Set(util.UserContextKey, &user.User{ID: 1, Role: &user.Role{Name: "manager"}})
-	rows := sqlmock.NewRows(getTaskColumns).AddRow(1, "1", nil, 1, "joel")
+	rows := sqlmock.NewRows(taskColumns).AddRow(1, "1", nil, 1, "joel")
 
 	s.sqlmock.ExpectQuery(getTaskSQL).WillReturnRows(rows)
 	s.sqlmock.ExpectExec(updateTaskSQL).WillReturnResult(sqlmock.NewResult(5, 1))
-	updatedRows := sqlmock.NewRows(getTaskColumns).AddRow(1, "1", &t, 5, "joel")
+	updatedRows := sqlmock.NewRows(taskColumns).AddRow(1, "1", &t, 5, "joel")
 	s.sqlmock.ExpectQuery(getTaskSQL).WillReturnRows(updatedRows)
 
 	userRows := sqlmock.NewRows([]string{"id", "username", "role.name", "role.id"}).AddRow(1, "joao", util.AdminRole, 2).AddRow(2, "j", util.AdminRole, 2)

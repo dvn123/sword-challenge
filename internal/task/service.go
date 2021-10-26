@@ -16,7 +16,7 @@ type Service struct {
 }
 
 type Publisher interface {
-	PublishTask(t Notification)
+	PublishTask(t Notification) error
 }
 
 func NewService(router *gin.RouterGroup, userService *user.Service, db *sqlx.DB, taskPublisher Publisher, logger *zap.SugaredLogger, key string) *Service {
