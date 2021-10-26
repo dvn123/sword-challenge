@@ -12,14 +12,19 @@ type Service struct {
 	logger        *zap.SugaredLogger
 	userService   *user.Service
 	taskPublisher Publisher
+	taskEncryptor *taskCrypto
 }
 
 type Publisher interface {
-	PublishTask(t NotificationTask)
+	PublishTask(t Notification)
 }
 
-func NewService(router *gin.RouterGroup, userService *user.Service, db *sqlx.DB, taskPublisher Publisher, logger *zap.SugaredLogger) *Service {
-	taskService := &Service{userService: userService, db: db, taskPublisher: taskPublisher, logger: logger}
+func NewService(router *gin.RouterGroup, userService *user.Service, db *sqlx.DB, taskPublisher Publisher, logger *zap.SugaredLogger, key string) *Service {
+	c, err := NewCrypto(key, logger)
+	if err != nil {
+		logger.Fatalw("Failed to create task encryptor", "error", err)
+	}
+	taskService := &Service{userService: userService, db: db, taskPublisher: taskPublisher, taskEncryptor: c, logger: logger}
 	router.GET("/tasks/:task-id", taskService.getTasks)
 	router.PUT("/tasks/:task-id", taskService.updateTask)
 	router.DELETE("/tasks/:task-id", taskService.deleteTask)

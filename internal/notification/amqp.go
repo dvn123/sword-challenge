@@ -18,14 +18,7 @@ type Service struct {
 
 func NewService(rabbitChannel *amqp.Channel, logger *zap.SugaredLogger, queueName string) (*Service, error) {
 	s := &Service{rabbitChannel: rabbitChannel, logger: logger}
-	queue, err := rabbitChannel.QueueDeclare(
-		queueName, // name of the queue
-		true,      // durable
-		false,     // delete when unused
-		false,     // exclusive
-		false,     // noWait
-		nil,       // arguments
-	)
+	queue, err := rabbitChannel.QueueDeclare(queueName, true, false, false, false, nil)
 	s.consumerTag = "sword-challenge-server-" + uuid.New().String()
 
 	if err != nil {
@@ -49,7 +42,7 @@ func (s *Service) StartConsumer() {
 func (s *Service) messageHandler(deliveries <-chan amqp.Delivery) {
 	s.logger.Infow("Started notifications consumer", "consumerTag", s.consumerTag)
 	for d := range deliveries {
-		var t task.NotificationTask
+		var t task.Notification
 		err := json.Unmarshal(d.Body, &t)
 		if err != nil {
 			s.logger.Warnw("Failed to parse notification body to task", "error", err)

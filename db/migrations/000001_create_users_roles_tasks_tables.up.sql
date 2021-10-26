@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS users
 
 CREATE TABLE IF NOT EXISTS tasks
 (
-    id             BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    user_id        VARCHAR(255) NOT NULL REFERENCES users,
+    id             BIGINT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id        BIGINT           NOT NULL REFERENCES users,
+    summary        VARBINARY(10012) NOT NULL, # 2500*(max char size in UTF-8) + IV
     completed_date TIMESTAMP
 );

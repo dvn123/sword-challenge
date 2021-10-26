@@ -37,7 +37,7 @@ func main() {
 		}
 	}(logger)
 
-	s, err := internal.NewServer(db, logger, ginEngine, ch)
+	s, err := internal.NewServer(db, logger, ginEngine, ch, os.Getenv("AES_KEY"))
 	if err != nil {
 		log.Fatalf("Failed to create server. error: %v", err)
 	}

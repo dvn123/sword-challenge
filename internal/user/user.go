@@ -17,7 +17,7 @@ type Role struct {
 type User struct {
 	ID       int    `json:"id,omitempty" binding:"required"`
 	Role     *Role  `json:"role,omitempty"`
-	Username string `json:"username" binding:"required"`
+	Username string `json:"username"`
 }
 
 type Service struct {
