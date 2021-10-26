@@ -80,10 +80,10 @@ func (s *SwordChallengeServer) RunMigrations() error {
 	return nil
 }
 
-func (s *SwordChallengeServer) StartWithGracefulShutdown(port int) error {
+func (s *SwordChallengeServer) StartWithGracefulShutdown(ctx context.Context, port int) error {
 	s.notificationService.StartConsumer()
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	s.server = &http.Server{
 		Addr:    ":" + strconv.Itoa(port),
@@ -113,6 +113,6 @@ func (s *SwordChallengeServer) StartWithGracefulShutdown(port int) error {
 		s.logger.Errorw("Failed to shut down server", "error", err)
 	}
 
-	s.logger.Infow("Shutting down server")
+	s.logger.Infow("Server closed successfully")
 	return nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -48,7 +49,7 @@ func main() {
 		log.Fatalf("Failed to run migration on the database. err: %v", err)
 	}
 	// TODO This should be configurable
-	err = s.StartWithGracefulShutdown(8080)
+	err = s.StartWithGracefulShutdown(context.Background(), 8080)
 	if err != nil {
 		log.Fatalf("Failed to start server. error: %v", err)
 	}
