@@ -6,11 +6,9 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
@@ -37,22 +35,9 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	router := gin.New()
 
 	ctx := context.Background()
-	req := testcontainers.ContainerRequest{
-		Image:        "rabbitmq:3-management-alpine",
-		ExposedPorts: []string{"5672/tcp", "15672/tcp"},
-		WaitingFor:   wait.ForLog("Server startup complete"),
-	}
-	rabbitC, _ := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	s.rabbitContainer = &rabbitC
-
-	endpoint, _ := rabbitC.PortEndpoint(ctx, "5672", "")
-	conn, _ := amqp.Dial("amqp://guest:guest@" + endpoint)
-	rabbitChan, _ := conn.Channel()
-
-	server, _ := NewServer(sqlx.NewDb(db, "mysql"), logger.Sugar(), router, rabbitChan, "6368616e676520746869732070617373")
+	container, channel := startRabbitTestContainer(ctx)
+	s.rabbitContainer = &container
+	server, _ := NewServer(sqlx.NewDb(db, "mysql"), logger.Sugar(), router, channel, "6368616e676520746869732070617373")
 
 	server.notificationService.StartConsumer()
 	s.s = httptest.NewServer(server.router)
