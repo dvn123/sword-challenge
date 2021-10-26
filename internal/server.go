@@ -30,7 +30,7 @@ type SwordChallengeServer struct {
 }
 
 // NewServer setups the server routes and dependencies, everything is a bit too coupled so we have some funky logic to check whether we're using rabbit or not
-func NewServer(db *sqlx.DB, logger *zap.SugaredLogger, router *gin.Engine, rabbitCh *amqp.Channel) (*SwordChallengeServer, error) {
+func NewServer(db *sqlx.DB, logger *zap.SugaredLogger, router *gin.Engine, rabbitCh *amqp.Channel, key string) (*SwordChallengeServer, error) {
 	s := &SwordChallengeServer{db: db, router: router, logger: logger}
 	authorizedAPI := router.Group("api/v1")
 	authorizedAPI.Use(s.requireAuthentication)
@@ -44,7 +44,7 @@ func NewServer(db *sqlx.DB, logger *zap.SugaredLogger, router *gin.Engine, rabbi
 	s.userService = user.NewService(publicAPI, db, logger)
 
 	var pub task.Publisher
-	pub = &LogPublisher{logger: logger}
+	pub = &task.LogPublisher{Logger: logger}
 	if rabbitCh != nil {
 		not, err := notification.NewService(rabbitCh, logger, "tasks")
 		if err != nil {
@@ -53,7 +53,7 @@ func NewServer(db *sqlx.DB, logger *zap.SugaredLogger, router *gin.Engine, rabbi
 		s.notificationService = not
 		pub = &notification.RabbitPublisher{RabbitChannel: rabbitCh, Logger: logger, NotificationsQueue: "tasks"}
 	}
-	s.tasksService = task.NewService(authorizedAPI, s.userService, db, pub, logger)
+	s.tasksService = task.NewService(authorizedAPI, s.userService, db, pub, logger, key)
 
 	return s, nil
 }

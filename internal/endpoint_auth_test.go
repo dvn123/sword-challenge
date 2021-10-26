@@ -30,13 +30,12 @@ func TestAuth(t *testing.T) {
 	logger := zap.NewNop()
 	router := gin.New()
 
-	server, err := NewServer(sqlx.NewDb(db, "mysql"), logger.Sugar(), router, nil)
+	server, err := NewServer(sqlx.NewDb(db, "mysql"), logger.Sugar(), router, nil, "6368616e676520746869732070617373")
 	if err != nil {
 		t.Fatal(err)
 	}
 	s := httptest.NewServer(server.router)
 	t.Cleanup(s.Close)
-	t.Parallel()
 
 	taskWithUserID1 := []byte(`{"id":1, "summary": "a", "user": {"id": 1, "username": "a"}}`)
 

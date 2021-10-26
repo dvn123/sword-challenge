@@ -14,7 +14,7 @@ type RabbitPublisher struct {
 	NotificationsQueue string
 }
 
-func (r *RabbitPublisher) PublishTask(t task.NotificationTask) {
+func (r *RabbitPublisher) PublishTask(t task.Notification) {
 	jsonTask, err := json.Marshal(t)
 	if err != nil {
 		r.Logger.Warnw("Failed to marshal task to JSON when sending notification", "error", err)
