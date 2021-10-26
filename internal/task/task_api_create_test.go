@@ -12,7 +12,7 @@ import (
 	"sword-challenge/internal/util"
 )
 
-func (s *TaskTestSuite) TestFailToCreateRequestedTaskInDatabase() {
+func (s *TaskAPITestSuite) TestFailToCreateRequestedTaskInDatabase() {
 	jsonTask, _ := json.Marshal(task{Summary: "test", CompletedDate: nil, User: &user.User{ID: 1, Username: "ol"}})
 	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(jsonTask))
 
@@ -28,7 +28,7 @@ func (s *TaskTestSuite) TestFailToCreateRequestedTaskInDatabase() {
 	assert.Equal(s.T(), 500, s.w.Code)
 }
 
-func (s *TaskTestSuite) TestCreateRequestedTask() {
+func (s *TaskAPITestSuite) TestCreateRequestedTask() {
 	jsonTask, _ := json.Marshal(task{Summary: "test", CompletedDate: nil, User: &user.User{ID: 1, Username: "ol"}})
 	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(jsonTask))
 

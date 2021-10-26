@@ -25,9 +25,9 @@ const deleteTaskSQL = "DELETE FROM tasks t WHERE t.id = .+;"
 const createTaskSQL = "INSERT INTO tasks (.+, .+) VALUES (.+, .+);"
 const updateTaskSQL = "UPDATE tasks SET user_id = COALESCE(.+, .+), summary = COALESCE(.+, .+), completed_date = .+ WHERE id = .+;"
 
-var getTaskColumns = []string{"id", "summary", "completed_date", "user.id", "user.username"}
+var taskColumns = []string{"id", "summary", "completed_date", "user.id", "user.username"}
 
-type TaskTestSuite struct {
+type TaskAPITestSuite struct {
 	suite.Suite
 	db         *sqlx.DB
 	sqlmock    sqlmock.Sqlmock
@@ -39,7 +39,7 @@ type TaskTestSuite struct {
 	w *httptest.ResponseRecorder
 }
 
-func (s *TaskTestSuite) SetupSuite() {
+func (s *TaskAPITestSuite) SetupSuite() {
 	db, mock, _ := sqlmock.New()
 	logger, _ := zap.NewDevelopment()
 	sqlxDb := sqlx.NewDb(db, "mysql")
@@ -62,17 +62,17 @@ func (s *TaskTestSuite) SetupSuite() {
 	}
 }
 
-func (s *TaskTestSuite) TearDownSuite() {
+func (s *TaskAPITestSuite) TearDownSuite() {
 	s.db.Close()
 }
 
-func (s *TaskTestSuite) SetupTest() {
+func (s *TaskAPITestSuite) SetupTest() {
 	s.w = httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(s.w)
 	s.c = c
 }
 
-func (s *TaskTestSuite) TestInvalidTaskIDWhenGettingTask() {
+func (s *TaskAPITestSuite) TestInvalidTaskIDWhenGettingTask() {
 	invalidTaskID := gin.Param{Key: "task-id", Value: "ola"}
 
 	getTaskRecorder := httptest.NewRecorder()
@@ -97,7 +97,7 @@ func (s *TaskTestSuite) TestInvalidTaskIDWhenGettingTask() {
 	assert.Equal(s.T(), 400, deleteTaskRecorder.Code)
 }
 
-func (s *TaskTestSuite) TestFailToParseRequestBodyWhenParsingTask() {
+func (s *TaskAPITestSuite) TestFailToParseRequestBodyWhenParsingTask() {
 	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader([]byte("asdasd")))
 
 	createTaskRecorder := httptest.NewRecorder()
@@ -118,7 +118,7 @@ func (s *TaskTestSuite) TestFailToParseRequestBodyWhenParsingTask() {
 	assert.Equal(s.T(), 400, updateTaskRecorder.Code)
 }
 
-func (s *TaskTestSuite) TestDeleteRequestedTask() {
+func (s *TaskAPITestSuite) TestDeleteRequestedTask() {
 	s.c.Params = append(s.c.Params, validTaskId)
 	s.c.Set(util.UserContextKey, &user.User{ID: 1, Role: &user.Role{Name: "manager"}})
 
@@ -129,7 +129,7 @@ func (s *TaskTestSuite) TestDeleteRequestedTask() {
 	assert.Equal(s.T(), 200, s.w.Code)
 }
 
-func (s *TaskTestSuite) TestDeleteRequestedTaskNotFound() {
+func (s *TaskAPITestSuite) TestDeleteRequestedTaskNotFound() {
 	s.c.Params = append(s.c.Params, validTaskId)
 	s.c.Set(util.UserContextKey, &user.User{ID: 1, Role: &user.Role{Name: "manager"}})
 
@@ -141,6 +141,6 @@ func (s *TaskTestSuite) TestDeleteRequestedTaskNotFound() {
 	assert.Equal(s.T(), 404, s.w.Code)
 }
 
-func TestExampleTestSuite(t *testing.T) {
-	suite.Run(t, new(TaskTestSuite))
+func TestTaskTestSuite(t *testing.T) {
+	suite.Run(t, new(TaskAPITestSuite))
 }

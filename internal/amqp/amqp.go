@@ -1,4 +1,4 @@
-package notification
+package amqp
 
 import (
 	"encoding/json"
