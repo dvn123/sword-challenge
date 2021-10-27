@@ -75,7 +75,7 @@ func (s *IntegrationTestSuite) TestNotificationsAreConsumedWhenTaskIsCompleted()
 	updatedRows := sqlmock.NewRows([]string{"id", "summary", "completed_date", "user.id", "user.username"}).AddRow(1, hexBytes, &ti, 5, "joel")
 	s.sqlmock.ExpectQuery("SELECT").WillReturnRows(updatedRows)
 
-	managerRows := sqlmock.NewRows([]string{"id", "username", "role.name", "role.id"}).AddRow("1", "joao", "manager", 2).AddRow("2", "joel", "manager", 2)
+	managerRows := sqlmock.NewRows([]string{"id", "username", "role.name", "role.id"}).AddRow("1", "manager1", "manager", 2).AddRow("2", "manager2", "manager", 2)
 	s.sqlmock.ExpectQuery("SELECT").WithArgs("manager").WillReturnRows(managerRows)
 
 	response, err := client.Do(req)

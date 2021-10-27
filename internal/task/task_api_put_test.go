@@ -81,14 +81,14 @@ func (s *TaskAPITestSuite) TestUpdateTaskFailToUpdateTask() {
 
 func (s *TaskAPITestSuite) TestUpdateTaskSuccess() {
 	t := time.Date(2011, 1, 1, 1, 1, 1, 1, time.UTC)
-	completedTask := task{Summary: "test", CompletedDate: &t, User: &user.User{ID: 2, Username: "o"}}
+	completedTask := task{Summary: "test", CompletedDate: &t, User: &user.User{ID: 1, Username: "o"}}
 	et, _ := s.tEncryptor.encryptTask(&completedTask)
 	jsonTask, _ := json.Marshal(completedTask)
 	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(jsonTask))
 
 	s.c.Request = req
 	s.c.Params = append(s.c.Params, gin.Param{Key: "task-id", Value: "1"})
-	s.c.Set(util.UserContextKey, &user.User{ID: 1, Role: &user.Role{Name: "manager"}})
+	s.c.Set(util.UserContextKey, &user.User{ID: 1, Role: &user.Role{Name: "technician"}})
 	rows := sqlmock.NewRows(taskColumns).AddRow(1, "1", nil, 1, "joel")
 
 	s.sqlmock.ExpectQuery(getTaskSQL).WillReturnRows(rows)

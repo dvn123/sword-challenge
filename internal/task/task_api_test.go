@@ -21,6 +21,7 @@ var validJsonTask, _ = json.Marshal(task{Summary: "test", User: &user.User{ID: 1
 
 const getTaskSQL = "SELECT t.id, t.summary, t.completed_date, u.id as 'user.id', u.username as 'user.username' FROM tasks t INNER JOIN users u on t.user_id = u.id WHERE t.id = .+;"
 const getTasksSQL = "SELECT t.id, t.summary, t.completed_date, u.id as 'user.id', u.username as 'user.username' FROM tasks t INNER JOIN users u on t.user_id = u.id WHERE t.user_id = .+;"
+const getAllTasksSQL = "SELECT t.id, t.summary, t.completed_date, u.id as 'user.id', u.username as 'user.username' FROM tasks t INNER JOIN users u on t.user_id = u.id;"
 const deleteTaskSQL = "DELETE FROM tasks t WHERE t.id = .+;"
 const createTaskSQL = "INSERT INTO tasks (.+, .+) VALUES (.+, .+);"
 const updateTaskSQL = "UPDATE tasks SET user_id = COALESCE(.+, .+), summary = COALESCE(.+, .+), completed_date = .+ WHERE id = .+;"

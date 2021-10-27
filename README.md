@@ -53,17 +53,17 @@ Starting server and all dependencies:
 docker-compose up --build
 ```
 
-The application will create 2 users on startup, user with ID 1 is admin and the one with ID 2 is a technician.
+The application will create 2 users on startup, user with ID 2 is admin and the one with ID 1 is a technician.
 
 ### Demo
 
 Login
 
 ```shell
-curl -L -X POST 'http://localhost:8081/api/v1/login' -H 'Content-Type: application/json' --data-raw '{ "id": 2 }' -v
+curl -L -X POST 'http://localhost:8081/api/v1/login' -H 'Content-Type: application/json' --data-raw '{ "id": 1 }' -v
 ```
 
-Copy cookie from login response header and replace $SCS_TOKEN `$SCS_TOKEN=$TOKEN_FROM_COOKIE`
+Copy cookie from login response header and replace $SCS_TOKEN `SCS_TOKEN=$TOKEN_FROM_COOKIE`
 
 Create a task:
 
@@ -83,16 +83,21 @@ Complete the task:
 curl -L -X PUT 'http://localhost:8081/api/v1/tasks/1' -H "x-auth-token: $SCS_TOKEN" -H 'Content-Type: application/json' --data-raw '{ "completedDate": "2021-10-23T22:50:23Z", "user": { "id": 1 } }' -v
  ```
 
+Login as manager;
+```shell
+curl -L -X POST 'http://localhost:8081/api/v1/login' -H 'Content-Type: application/json' --data-raw '{ "id": 2 }' -v
+```
+
 Delete the task:
 
 ````shell
-curl -L -X DELETE 'http://localhost:8081/api/v1/tasks/1' -H 'x-auth-token: $SCS_TOKEN' -v
+curl -L -X DELETE 'http://localhost:8081/api/v1/tasks/1' -H 'x-auth-token: $SCS_ADMIN_TOKEN' -v
 ````
 
 # Comments
 
 * Users API is only for testing, a user logging in with only an ID is obviously not ideal :D
-* Server starts before RabbitMQ when using docker-compose, will fail a few times but eventually it will start
+* Server starts before RabbitMQ when using docker-compose, will fail a few times but eventually it will start. Sometimes it starts multiple web server containers which causes issues though.
 
 ### Encryption
 
