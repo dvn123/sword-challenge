@@ -1,11 +1,14 @@
 package amqp
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 	"sword-challenge/internal/task"
+	"sync"
+	"time"
 )
 
 type Service struct {
@@ -30,13 +33,30 @@ func NewService(rabbitChannel *amqp.Channel, logger *zap.SugaredLogger, queueNam
 	return s, nil
 }
 
-func (s *Service) StartConsumer() {
+func (s *Service) StartConsumer(ctx context.Context, wg *sync.WaitGroup) {
 	s.gracefulShutdownChannel = make(chan error)
 	deliveries, err := s.rabbitChannel.Consume(s.rabbitQueue.Name, s.consumerTag, true, false, false, false, nil)
 	if err != nil {
 		s.logger.Errorw("Failed to create RabbitMQ consumer", "error", err)
 	}
 	go s.messageHandler(deliveries)
+	wg.Add(1)
+
+	<-ctx.Done()
+	if err := s.rabbitChannel.Cancel(s.consumerTag, false); err != nil {
+		s.logger.Warnw("Failed to cancel RabbitMQ consumer", "error", err)
+	}
+	select {
+	case <-s.gracefulShutdownChannel:
+	case <-time.After(5 * time.Second):
+		s.logger.Warnw("RabbitMQ consumer did not shut down after 5 seconds")
+	}
+
+	if err := s.rabbitChannel.Close(); err != nil {
+		s.logger.Warnw("Failed to close RabbitMQ connection", "error", err)
+	}
+	wg.Done()
+	s.logger.Infow("Successfully closed RabbitMQ connection")
 }
 
 func (s *Service) messageHandler(deliveries <-chan amqp.Delivery) {
@@ -56,17 +76,4 @@ func (s *Service) messageHandler(deliveries <-chan amqp.Delivery) {
 	}
 	s.gracefulShutdownChannel <- nil
 	s.logger.Infow("Closed RabbitMQ consumer", "consumerTag", s.consumerTag)
-}
-
-func (s *Service) Shutdown() error {
-	if err := s.rabbitChannel.Cancel(s.consumerTag, false); err != nil {
-		s.logger.Warnw("Failed to cancel RabbitMQ consumer", "error", err)
-		return err
-	}
-	if err := s.rabbitChannel.Close(); err != nil {
-		s.logger.Warnw("Failed to close RabbitMQ connection", "error", err)
-		return err
-	}
-	<-s.gracefulShutdownChannel
-	return nil
 }
