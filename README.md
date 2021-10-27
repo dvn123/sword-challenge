@@ -63,7 +63,7 @@ Login
 curl -L -X POST 'http://localhost:8081/api/v1/login' -H 'Content-Type: application/json' --data-raw '{ "id": 1 }' -v
 ```
 
-Copy cookie from login response header and replace $SCS_TOKEN `SCS_TOKEN=$TOKEN_FROM_COOKIE`
+Copy cookie from login response cookie header and replace $SCS_TOKEN `SCS_TOKEN=$TOKEN_FROM_COOKIE`
 
 Create a task:
 
@@ -87,11 +87,11 @@ Login as manager;
 ```shell
 curl -L -X POST 'http://localhost:8081/api/v1/login' -H 'Content-Type: application/json' --data-raw '{ "id": 2 }' -v
 ```
-
+Set the ENV variable SCS_ADMIN_TOKEN=...
 Delete the task:
 
 ````shell
-curl -L -X DELETE 'http://localhost:8081/api/v1/tasks/1' -H 'x-auth-token: $SCS_ADMIN_TOKEN' -v
+curl -L -X DELETE 'http://localhost:8081/api/v1/tasks/1' -H "x-auth-token: $SCS_ADMIN_TOKEN" -v
 ````
 
 # Comments
@@ -139,4 +139,4 @@ It's also worth mentioning the server supports graceful shutdown, which is impor
 
 I focused on the deployment of the server itself, managing RabbitMQ or MySQL clusters from the repo of a server is not a good practice.
 
-To view the resulting files run `helm template scs-chart --values scs-chart/values-qa.yaml` from the kubernetes directory.
+To view the resulting files run `helm template scs-chart --values scs-chart/values-qa.yaml` from the deployment directory.

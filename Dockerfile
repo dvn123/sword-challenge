@@ -9,6 +9,7 @@ WORKDIR /app
 RUN go mod download
 
 COPY *.go ./
+COPY deployment/wait-for.sh .
 
 RUN go build .
 

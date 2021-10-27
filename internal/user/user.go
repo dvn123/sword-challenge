@@ -33,7 +33,6 @@ func NewService(db *sqlx.DB, logger *zap.SugaredLogger) *Service {
 
 func (s *Service) SetupRoutes(publicAPI *gin.RouterGroup) {
 	usersAPI := publicAPI.Group("")
-	usersAPI.Use(gin.Logger())
 	usersAPI.POST("/login", s.loginUser)
 }
 
