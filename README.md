@@ -101,8 +101,8 @@ curl -L -X DELETE 'http://localhost:8081/api/v1/tasks/1' -H 'x-auth-token: $SCS_
 
 ### Encryption
 
-Summary is encrypted using AES-GCM-256 and a random IV since it contains PII. There are also no logs of the decrypted summary on the app. Every time a task is decrypted there is a log printed with the
-authenticated user which functions as a sort of audit log.
+Summary is encrypted using AES-256 with GCM and a random 12 byte IV since it contains PII. There are also no logs of the decrypted summary on the app. Every time a task is decrypted there is a log printed with the
+authenticated user which functions as a sort of audit log, this audit log would be more fleshed out in a real application.
 
 ### Notifications
 
