@@ -15,6 +15,7 @@ import (
 	serverAmqp "sword-challenge/internal/amqp"
 	"sword-challenge/internal/task"
 	"sword-challenge/internal/user"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -88,11 +89,12 @@ func (s *SwordChallengeServer) RunMigrations() error {
 }
 
 func (s *SwordChallengeServer) StartWithGracefulShutdown(ctx context.Context, port int) error {
-	if s.notificationService != nil {
-		s.notificationService.StartConsumer()
-	}
-
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+	wg := &sync.WaitGroup{}
+	if s.notificationService != nil {
+		go s.notificationService.StartConsumer(ctx, wg)
+
+	}
 	defer stop()
 	s.server = &http.Server{
 		Addr:    ":" + strconv.Itoa(port),
@@ -113,17 +115,12 @@ func (s *SwordChallengeServer) StartWithGracefulShutdown(ctx context.Context, po
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if s.notificationService != nil {
-		err := s.notificationService.Shutdown()
-		if err != nil {
-			s.logger.Errorw("Failed to shut down RabbitMQ connection", "error", err)
-		}
-	}
-
 	if err := s.server.Shutdown(ctx); err != nil {
 		s.logger.Errorw("Failed to shut down server", "error", err)
 	}
 
 	s.logger.Infow("Server closed successfully")
+	wg.Wait()
+	s.logger.Infow("Server dependencies closed successfully")
 	return nil
 }

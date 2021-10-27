@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sword-challenge/internal/util"
+	"sync"
 	"testing"
 	"time"
 )
@@ -38,13 +39,14 @@ func (s *IntegrationTestSuite) SetupSuite() {
 
 	router := gin.New()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	s.T().Cleanup(cancel)
 	container, channel := startRabbitTestContainer(ctx)
 	s.rabbitContainer = &container
 	server, _ := NewServer(sqlx.NewDb(db, "mysql"), logger.Sugar(), router, channel, "6368616e676520746869732070617373", "tasks")
 	server.SetupRoutes()
 
-	server.notificationService.StartConsumer()
+	go server.notificationService.StartConsumer(ctx, &sync.WaitGroup{})
 	s.s = httptest.NewServer(server.router)
 }
 
@@ -80,7 +82,7 @@ func (s *IntegrationTestSuite) TestNotificationsAreConsumedWhenTaskIsCompleted()
 
 	response, err := client.Do(req)
 	if err != nil {
-		s.T().Fatal(err)
+		s.T().Error(err)
 	}
 
 	assert.Equal(s.T(), 200, response.StatusCode)

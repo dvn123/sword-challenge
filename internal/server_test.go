@@ -35,6 +35,7 @@ func TestStartAndStopServer(t *testing.T) {
 	}
 	server.SetupRoutes()
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	go func() {
 		err := server.StartWithGracefulShutdown(ctx, 9090)
