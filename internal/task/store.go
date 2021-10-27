@@ -46,7 +46,6 @@ func (s *Service) addTaskToStore(task *encryptedTask) (int, error) {
 func (s *Service) updateTaskInStore(task *encryptedTask) (*encryptedTask, error) {
 	_, err := s.db.Exec(
 		// Coalesce the fields so we only update the ones that were not sent as empty to the API
-		// TODO: only set completed_date if it was explicitly set
 		"UPDATE tasks SET user_id = COALESCE(?, user_id), summary = COALESCE(?, summary), completed_date = ? WHERE id = ?;",
 		task.User.ID, task.EncryptedSummary, task.CompletedDate, task.ID)
 	if err != nil {

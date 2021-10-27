@@ -19,15 +19,18 @@ type Publisher interface {
 	PublishTask(t Notification) error
 }
 
-func NewService(router *gin.RouterGroup, userService *user.Service, db *sqlx.DB, taskPublisher Publisher, logger *zap.SugaredLogger, key string) *Service {
+func NewService(userService *user.Service, db *sqlx.DB, taskPublisher Publisher, logger *zap.SugaredLogger, key string) *Service {
 	c, err := NewCrypto(key, logger)
 	if err != nil {
 		logger.Fatalw("Failed to create task encryptor", "error", err)
 	}
 	taskService := &Service{userService: userService, db: db, taskPublisher: taskPublisher, taskEncryptor: c, logger: logger}
-	router.GET("/tasks", taskService.getTasks)
-	router.PUT("/tasks/:task-id", taskService.updateTask)
-	router.DELETE("/tasks/:task-id", taskService.deleteTask)
-	router.POST("/tasks", taskService.createTask)
 	return taskService
+}
+
+func (s *Service) SetupRoutes(router *gin.RouterGroup) {
+	router.GET("/tasks", s.getTasks)
+	router.PUT("/tasks/:task-id", s.updateTask)
+	router.DELETE("/tasks/:task-id", s.deleteTask)
+	router.POST("/tasks", s.createTask)
 }

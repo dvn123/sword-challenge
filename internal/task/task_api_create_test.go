@@ -13,8 +13,7 @@ import (
 )
 
 func (s *TaskAPITestSuite) TestFailToCreateRequestedTaskInDatabase() {
-	jsonTask, _ := json.Marshal(task{Summary: "test", CompletedDate: nil, User: &user.User{ID: 1, Username: "ol"}})
-	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(jsonTask))
+	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(validJsonTask))
 
 	s.c.Request = req
 	s.c.Params = append(s.c.Params, gin.Param{Key: "task-id", Value: "1"})
@@ -29,8 +28,7 @@ func (s *TaskAPITestSuite) TestFailToCreateRequestedTaskInDatabase() {
 }
 
 func (s *TaskAPITestSuite) TestCreateRequestedTask() {
-	jsonTask, _ := json.Marshal(task{Summary: "test", CompletedDate: nil, User: &user.User{ID: 1, Username: "ol"}})
-	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(jsonTask))
+	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(validJsonTask))
 
 	s.c.Request = req
 	s.c.Params = append(s.c.Params, gin.Param{Key: "task-id", Value: "1"})

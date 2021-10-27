@@ -15,6 +15,9 @@ import (
 
 func main() {
 	db, err := setupDatabase()
+	if err != nil {
+		log.Fatalf("Failed to setup database. err: %v", err)
+	}
 	defer func(db *sqlx.DB) {
 		if err := db.Close(); err != nil {
 			log.Printf("Failed to close DB connection. error: %v", err)
@@ -38,11 +41,13 @@ func main() {
 		}
 	}(logger)
 
-	s, err := internal.NewServer(db, logger, ginEngine, ch, os.Getenv("AES_KEY"))
+	// TODO QueueName should be configurable
+	s, err := internal.NewServer(db, logger, ginEngine, ch, os.Getenv("AES_KEY"), "tasks")
 	if err != nil {
 		log.Fatalf("Failed to create server. error: %v", err)
 	}
 
+	s.SetupRoutes()
 	// TODO This should be configurable
 	err = s.RunMigrations()
 	if err != nil {

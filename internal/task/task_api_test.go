@@ -17,8 +17,7 @@ import (
 )
 
 var validTaskId = gin.Param{Key: "task-id", Value: "1"}
-var validJsonTask, _ = json.Marshal(task{Summary: "test", CompletedDate: nil, User: &user.User{ID: 1, Username: "o"}})
-var req, _ = http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(validJsonTask))
+var validJsonTask, _ = json.Marshal(task{Summary: "test", User: &user.User{ID: 1, Username: "o"}})
 
 const getTaskSQL = "SELECT t.id, t.summary, t.completed_date, u.id as 'user.id', u.username as 'user.username' FROM tasks t INNER JOIN users u on t.user_id = u.id WHERE t.id = .+;"
 const getTasksSQL = "SELECT t.id, t.summary, t.completed_date, u.id as 'user.id', u.username as 'user.username' FROM tasks t INNER JOIN users u on t.user_id = u.id WHERE t.user_id = .+;"

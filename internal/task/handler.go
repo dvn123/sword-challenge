@@ -79,7 +79,7 @@ func (s *Service) createTask(c *gin.Context) {
 	receivedTask.ID = id
 	if err != nil {
 		s.logger.Warnw("Failed to add task to storage", "error", err)
-		c.JSON(http.StatusInternalServerError, nil) //todo error object
+		c.Status(http.StatusInternalServerError)
 		return
 	}
 	c.JSON(http.StatusCreated, receivedTask)
