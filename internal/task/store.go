@@ -30,6 +30,15 @@ func (s *Service) getTasksFromStore(id int) ([]encryptedTask, error) {
 	return task, nil
 }
 
+func (s *Service) getAllTasksFromStore() ([]encryptedTask, error) {
+	task := []encryptedTask{}
+	err := s.db.Select(&task, "SELECT t.id, t.summary, t.completed_date, u.id as 'user.id', u.username as 'user.username' FROM tasks t INNER JOIN users u on t.user_id = u.id;")
+	if err != nil {
+		return nil, err
+	}
+	return task, nil
+}
+
 func (s *Service) addTaskToStore(task *encryptedTask) (int, error) {
 	result, err := s.db.Exec("INSERT INTO tasks (user_id, summary) VALUES (?, ?);", task.User.ID, task.EncryptedSummary)
 	if err != nil {

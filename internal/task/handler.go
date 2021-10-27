@@ -28,7 +28,13 @@ func (s *Service) getTasks(c *gin.Context) {
 	uInterface, _ := c.Get(util.UserContextKey)
 	currentUser := uInterface.(*user.User)
 
-	encryptedTasks, err := s.getTasksFromStore(currentUser.ID)
+	var encryptedTasks []encryptedTask
+	var err error
+	if currentUser.Role.Name == util.AdminRole {
+		encryptedTasks, err = s.getAllTasksFromStore()
+	} else {
+		encryptedTasks, err = s.getTasksFromStore(currentUser.ID)
+	}
 	if err == sql.ErrNoRows {
 		s.logger.Infow("Failed to find task", "userId", currentUser.ID)
 		c.Status(http.StatusNotFound)
@@ -140,7 +146,7 @@ func (s *Service) updateTask(c *gin.Context) {
 		return
 	}
 
-	if taskToUpdate.CompletedDate == nil && updatedTask.CompletedDate != nil {
+	if taskToUpdate.CompletedDate == nil && updatedTask.CompletedDate != nil && currentUser.Role.Name != util.AdminRole {
 		go func(t encryptedTask) {
 			users, err := s.userService.GetUsersByRole(util.AdminRole)
 			if err != nil {
