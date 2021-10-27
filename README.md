@@ -31,7 +31,7 @@ Task ID should always be an integer for these APIs. Example valid task JSON:
 
 | Method     | Path       |   Auth | Possible HTTP Responses                                    |
 |----------|------------|---------------------------|-------------------------------|
-| GET | `/api/v1/tasks` | Authenticated only.<br /> Own task or manager  | 200 + list of tasks of the authenticated user 
+| GET | `/api/v1/tasks` | Authenticated only.<br /> Own task or manager  | 200 + list of tasks of the authenticated user
 | DELETE | `/api/v1/tasks/:task-id` |Authenticated only.<br /> Manager only. | 200 if task was deleted. <br/>404 if the task doesn't exist
 | PUT | `/api/v1/tasks/:task-id` |Authenticated only.<br /> Own task or manager | 200 + updated task if it exists and user has permissions. <br/>404 if the task doesn't exist
 | POST | `/api/v1/tasks` |Authenticated only.<br /> Own task or manager | 200 + task if task was created.
@@ -120,38 +120,15 @@ The queue is declared by the server on startup.
 * Security issues are checked thoroughly by auth + handler tests
 * In spite of this we still have good coverage
 
-# Notifications
+### Kubernetes deployment
 
-# TODO
+I used a simple helm chart with a service, deployment and hpa config that should work for this use case.
 
-- [x] Docker
-- [x] Setup Migrations
-- [x] Gin Boilerplate
-- [ ] API Errors
-- [x] Logging
-- [x] Authentication
-- [ ] Metrics
-- [ ] Traces
-- [x] Healthcheck
-- [x] Database Seeding
-- [ ] Helm charts
-- [x] Graceful shutdown
-- [x] Create task summary
+The deployment defines the deployment of the service as a pod, notables features are the HTTP health check probes. The service creates an IP for the set of pods so they are reachable internally. HPA
+sets the deployment to auto scale when the CPU reaches 80%. There are 2 different configurations, one for QA and another for PRD which serve as an example of how to change values between environments.
 
-# Users
+It's also worth mentioning the server supports graceful shutdown, which is important in an environment where servers are ephemeral like k8s.
 
-- [x] API Routes
-- [x] Setup basic tables
-- [ ] Add password (hash + salt)
-- [ ] Add roles routes
-- [ ] Implement role APIs
-- [ ] Implement user APIs
-- [ ] Add auth to APIs
-- [x] Login endpoint
+I focused on the deployment of the server itself, managing RabbitMQ or MySQL clusters from the repo of a server is not a good practice.
 
-# Tasks
-
-- [x] API Routes
-- [x] Setup tables
-- [x] Implement APIs
-- [x] Create Notification system
+To view the resulting files run `helm template scs-chart --values scs-chart/values-qa.yaml` from the kubernetes directory.
