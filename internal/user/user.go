@@ -6,6 +6,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	"net/http"
+	"sword-challenge/internal/util"
 	"time"
 )
 
@@ -52,6 +53,6 @@ func (s *Service) loginUser(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("auth-token", token, int(time.Hour), "/", "localhost", true, true)
+	c.SetCookie(util.AuthCookie, token, int(time.Hour), "/", "localhost", true, true)
 	c.Status(http.StatusOK)
 }
