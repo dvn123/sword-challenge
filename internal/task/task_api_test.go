@@ -21,6 +21,7 @@ var validJsonTask, _ = json.Marshal(task{Summary: "test", CompletedDate: nil, Us
 var req, _ = http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(validJsonTask))
 
 const getTaskSQL = "SELECT t.id, t.summary, t.completed_date, u.id as 'user.id', u.username as 'user.username' FROM tasks t INNER JOIN users u on t.user_id = u.id WHERE t.id = .+;"
+const getTasksSQL = "SELECT t.id, t.summary, t.completed_date, u.id as 'user.id', u.username as 'user.username' FROM tasks t INNER JOIN users u on t.user_id = u.id WHERE t.user_id = .+;"
 const deleteTaskSQL = "DELETE FROM tasks t WHERE t.id = .+;"
 const createTaskSQL = "INSERT INTO tasks (.+, .+) VALUES (.+, .+);"
 const updateTaskSQL = "UPDATE tasks SET user_id = COALESCE(.+, .+), summary = COALESCE(.+, .+), completed_date = .+ WHERE id = .+;"
@@ -75,12 +76,6 @@ func (s *TaskAPITestSuite) SetupTest() {
 func (s *TaskAPITestSuite) TestInvalidTaskIDWhenGettingTask() {
 	invalidTaskID := gin.Param{Key: "task-id", Value: "ola"}
 
-	getTaskRecorder := httptest.NewRecorder()
-	c1, _ := gin.CreateTestContext(getTaskRecorder)
-	c1.Params = append(c1.Params, invalidTaskID)
-	s.service.getTasks(c1)
-	c1.Writer.Flush()
-
 	updateTaskRecorder := httptest.NewRecorder()
 	c2, _ := gin.CreateTestContext(updateTaskRecorder)
 	c2.Params = append(c2.Params, invalidTaskID)
@@ -92,7 +87,6 @@ func (s *TaskAPITestSuite) TestInvalidTaskIDWhenGettingTask() {
 	s.service.deleteTask(c3)
 	c3.Writer.Flush()
 
-	assert.Equal(s.T(), 400, getTaskRecorder.Code)
 	assert.Equal(s.T(), 400, updateTaskRecorder.Code)
 	assert.Equal(s.T(), 400, deleteTaskRecorder.Code)
 }

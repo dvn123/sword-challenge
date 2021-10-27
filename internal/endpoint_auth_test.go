@@ -41,8 +41,8 @@ func TestAuth(t *testing.T) {
 
 	testData := [][]interface{}{
 		// tasks
-		{http.MethodGet, "/tasks/1", 0, "", nil, 401},
-		{http.MethodGet, "/tasks/1", 1, "manager", nil, 500},
+		{http.MethodGet, "/tasks", 0, "", nil, 401},
+		{http.MethodGet, "/tasks", 1, "manager", nil, 500},
 
 		{http.MethodPut, "/tasks/1", 0, "", nil, 401},
 		{http.MethodPut, "/tasks/1", 2, "technician", taskWithUserID1, 403},
