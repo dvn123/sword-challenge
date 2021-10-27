@@ -8,9 +8,11 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
@@ -40,6 +42,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	container, channel := startRabbitTestContainer(ctx)
 	s.rabbitContainer = &container
 	server, _ := NewServer(sqlx.NewDb(db, "mysql"), logger.Sugar(), router, channel, "6368616e676520746869732070617373", "tasks")
+	server.SetupRoutes()
 
 	server.notificationService.StartConsumer()
 	s.s = httptest.NewServer(server.router)
@@ -53,7 +56,7 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 	_ = s.db.Close()
 }
 
-func (s *IntegrationTestSuite) TestNoficationsAreConsumedWhenTaskIsCompleted() {
+func (s *IntegrationTestSuite) TestNotificationsAreConsumedWhenTaskIsCompleted() {
 	client := &http.Client{}
 	body := bytes.NewReader([]byte(`{"id":1, "completedDate": "2021-10-23T22:50:23Z", "summary": "a", "user": {"id": 1, "username": "a"}}`))
 
@@ -82,11 +85,27 @@ func (s *IntegrationTestSuite) TestNoficationsAreConsumedWhenTaskIsCompleted() {
 
 	assert.Equal(s.T(), 200, response.StatusCode)
 
-	//Because the notification has no side effect, there's nothing to assert here so we just sleep to make sure the logs are printed
+	//Because the notification has no side effect, there's nothing to assert here
 	// Maybe we could use a logger interface and mock it, but I don't think it's worth as this would have a side effect in a real life use case
-	time.Sleep(time.Second)
 }
 
 func TestIntegrationTestSuite(t *testing.T) {
 	suite.Run(t, new(IntegrationTestSuite))
+}
+
+func startRabbitTestContainer(ctx context.Context) (testcontainers.Container, *amqp.Channel) {
+	req := testcontainers.ContainerRequest{
+		Image:        "rabbitmq:3-management-alpine",
+		ExposedPorts: []string{"5672/tcp"},
+		WaitingFor:   wait.ForLog("Server startup complete"),
+	}
+	rabbitC, _ := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+
+	endpoint, _ := rabbitC.PortEndpoint(ctx, "5672", "")
+	conn, _ := amqp.Dial("amqp://guest:guest@" + endpoint)
+	rabbitChan, _ := conn.Channel()
+	return rabbitC, rabbitChan
 }
