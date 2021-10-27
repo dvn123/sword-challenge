@@ -11,6 +11,7 @@ require (
 	github.com/jmoiron/sqlx v1.3.4
 	github.com/rabbitmq/amqp091-go v1.1.0
 	github.com/stretchr/testify v1.7.0
+	github.com/testcontainers/testcontainers-go v0.11.1
 	go.uber.org/zap v1.19.1
 )
 
@@ -50,7 +51,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
-	github.com/testcontainers/testcontainers-go v0.11.1 // indirect
 	github.com/ugorji/go/codec v1.1.7 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
