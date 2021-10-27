@@ -32,10 +32,10 @@ type SwordChallengeServer struct {
 // NewServer setups the server routes and dependencies, everything is a bit too coupled so we have some funky logic to check whether we're using rabbit or not
 func NewServer(db *sqlx.DB, logger *zap.SugaredLogger, router *gin.Engine, rabbitCh *amqp.Channel, key string) (*SwordChallengeServer, error) {
 	s := &SwordChallengeServer{db: db, router: router, logger: logger}
-	authorizedAPI := router.Group("api/v1")
-	authorizedAPI.Use(s.requireAuthentication)
-
 	publicAPI := router.Group("api/v1")
+	publicAPI.Use(gin.Logger())
+	authorizedAPI := publicAPI.Group("")
+	authorizedAPI.Use(s.requireAuthentication)
 
 	publicAPI.GET("/health", func(c *gin.Context) {
 		c.Status(http.StatusOK)

@@ -12,7 +12,7 @@ import (
 
 type task struct {
 	ID            int        `json:"id,omitempty"`
-	Summary       string     `json:"summary,omitempty" binding:"required"`
+	Summary       string     `json:"summary,omitempty"`
 	CompletedDate *time.Time `json:"completedDate" db:"completed_date"`
 	User          *user.User `json:"user,omitempty" binding:"required"`
 }
@@ -25,36 +25,33 @@ type Notification struct {
 }
 
 func (s *Service) getTasks(c *gin.Context) {
-	id, err := s.mustGetTaskID(c)
-	if err != nil {
-		return
-	}
+	uInterface, _ := c.Get(util.UserContextKey)
+	currentUser := uInterface.(*user.User)
 
-	task, err := s.getTaskFromStore(id)
+	encryptedTasks, err := s.getTasksFromStore(currentUser.ID)
 	if err == sql.ErrNoRows {
-		s.logger.Infow("Failed to find task", "taskId", id)
+		s.logger.Infow("Failed to find task", "userId", currentUser.ID)
 		c.Status(http.StatusNotFound)
 		return
 	} else if err != nil {
 		s.logger.Warnw("Failed to get task from storage", "error", err)
-		c.Status(http.StatusInternalServerError) //todo error object
-		return
-	}
-
-	currentUser, err := user.CheckIdsMatchIfPresentOrIsManager(c, &task.User.ID)
-	if err != nil {
-		c.Status(http.StatusForbidden)
-		return
-	}
-
-	decryptedTask, err := s.taskEncryptor.decryptTask(task, currentUser.ID)
-	if err != nil {
-		s.logger.Warnw("Failed to decrypt task")
 		c.Status(http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, decryptedTask)
+	tasks := make([]task, len(encryptedTasks))
+	for i, t := range encryptedTasks {
+		t := t
+		decryptedTask, err := s.taskEncryptor.decryptTask(&t, currentUser.ID)
+		if err != nil {
+			s.logger.Warnw("Failed to decrypt task")
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+		tasks[i] = *decryptedTask
+	}
+
+	c.JSON(http.StatusOK, tasks)
 }
 
 func (s *Service) createTask(c *gin.Context) {
@@ -124,7 +121,7 @@ func (s *Service) updateTask(c *gin.Context) {
 		return
 	}
 
-	et := &encryptedTask{ID: receivedTask.ID, User: receivedTask.User}
+	et := &encryptedTask{ID: receivedTask.ID, User: receivedTask.User, CompletedDate: receivedTask.CompletedDate}
 	// Only encrypt if summary was set
 	if receivedTask.Summary != "" {
 		et2, err := s.taskEncryptor.encryptTask(receivedTask)
@@ -139,7 +136,7 @@ func (s *Service) updateTask(c *gin.Context) {
 	updatedTask, err := s.updateTaskInStore(et)
 	if err != nil {
 		s.logger.Warnw("Failed to update task in storage", "error", err)
-		c.JSON(http.StatusInternalServerError, nil) //todo error object
+		c.Status(http.StatusInternalServerError)
 		return
 	}
 
@@ -153,12 +150,20 @@ func (s *Service) updateTask(c *gin.Context) {
 
 			for _, u := range users {
 				u := u
-				s.taskPublisher.PublishTask(Notification{ID: t.ID, Manager: u.Username, CompletedDate: t.CompletedDate, User: t.User})
+				_ = s.taskPublisher.PublishTask(Notification{ID: t.ID, Manager: u.Username, CompletedDate: t.CompletedDate, User: t.User})
 			}
 
 		}(*updatedTask)
 	}
-	c.JSON(http.StatusOK, updatedTask)
+
+	decryptedTask, err := s.taskEncryptor.decryptTask(updatedTask, currentUser.ID)
+	if err != nil {
+		s.logger.Warnw("Failed to decrypt task")
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, decryptedTask)
 }
 
 func (s *Service) deleteTask(c *gin.Context) {

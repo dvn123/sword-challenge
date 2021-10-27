@@ -25,7 +25,7 @@ func NewService(router *gin.RouterGroup, userService *user.Service, db *sqlx.DB,
 		logger.Fatalw("Failed to create task encryptor", "error", err)
 	}
 	taskService := &Service{userService: userService, db: db, taskPublisher: taskPublisher, taskEncryptor: c, logger: logger}
-	router.GET("/tasks/:task-id", taskService.getTasks)
+	router.GET("/tasks", taskService.getTasks)
 	router.PUT("/tasks/:task-id", taskService.updateTask)
 	router.DELETE("/tasks/:task-id", taskService.deleteTask)
 	router.POST("/tasks", taskService.createTask)
