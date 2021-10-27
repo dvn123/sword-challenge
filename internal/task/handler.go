@@ -35,11 +35,7 @@ func (s *Service) getTasks(c *gin.Context) {
 	} else {
 		encryptedTasks, err = s.getTasksFromStore(currentUser.ID)
 	}
-	if err == sql.ErrNoRows {
-		s.logger.Infow("Failed to find task", "userId", currentUser.ID)
-		c.Status(http.StatusNotFound)
-		return
-	} else if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		s.logger.Warnw("Failed to get task from storage", "error", err)
 		c.Status(http.StatusInternalServerError)
 		return
