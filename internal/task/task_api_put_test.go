@@ -46,8 +46,7 @@ func (s *TaskAPITestSuite) TestUpdateTaskWhenTaskDoesntExist() {
 }
 
 func (s *TaskAPITestSuite) TestUpdateTaskWhenTaskExistsButDoesntBelongToNonAdminUser() {
-	jsonTask, _ := json.Marshal(task{Summary: "test", CompletedDate: nil, User: &user.User{ID: 1, Username: "o"}})
-	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(jsonTask))
+	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewReader(validJsonTask))
 
 	s.c.Request = req
 	s.c.Params = append(s.c.Params, validTaskId)

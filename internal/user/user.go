@@ -25,12 +25,15 @@ type Service struct {
 	Logger *zap.SugaredLogger
 }
 
-func NewService(public *gin.RouterGroup, db *sqlx.DB, logger *zap.SugaredLogger) *Service {
+func NewService(db *sqlx.DB, logger *zap.SugaredLogger) *Service {
 	service := &Service{DB: db, Logger: logger}
-	usersAPI := public.Group("")
-	usersAPI.Use(gin.Logger())
-	public.POST("/login", service.loginUser)
 	return service
+}
+
+func (s *Service) SetupRoutes(publicAPI *gin.RouterGroup) {
+	usersAPI := publicAPI.Group("")
+	usersAPI.Use(gin.Logger())
+	usersAPI.POST("/login", s.loginUser)
 }
 
 func (s *Service) loginUser(c *gin.Context) {

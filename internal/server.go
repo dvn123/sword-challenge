@@ -30,32 +30,39 @@ type SwordChallengeServer struct {
 }
 
 // NewServer setups the server routes and dependencies, everything is a bit too coupled so we have some funky logic to check whether we're using rabbit or not
-func NewServer(db *sqlx.DB, logger *zap.SugaredLogger, router *gin.Engine, rabbitCh *amqp.Channel, key string) (*SwordChallengeServer, error) {
+func NewServer(db *sqlx.DB, logger *zap.SugaredLogger, router *gin.Engine, rabbitCh *amqp.Channel, key string, queueName string) (*SwordChallengeServer, error) {
 	s := &SwordChallengeServer{db: db, router: router, logger: logger}
-	publicAPI := router.Group("api/v1")
+
+	s.userService = user.NewService(db, logger)
+
+	var not *serverAmqp.Service
+	if rabbitCh != nil {
+		notS, err := serverAmqp.NewService(rabbitCh, logger, queueName)
+		if err != nil {
+			return nil, err
+		}
+		not = notS
+	}
+
+	s.notificationService = not
+	pub := &serverAmqp.Publisher{RabbitChannel: rabbitCh, Logger: logger, NotificationsQueue: queueName}
+	s.tasksService = task.NewService(s.userService, db, pub, logger, key)
+
+	return s, nil
+}
+
+func (s *SwordChallengeServer) SetupRoutes() {
+	publicAPI := s.router.Group("api/v1")
 	publicAPI.Use(gin.Logger())
-	authorizedAPI := publicAPI.Group("")
-	authorizedAPI.Use(s.requireAuthentication)
+	privateAPI := publicAPI.Group("")
+	privateAPI.Use(s.requireAuthentication)
 
 	publicAPI.GET("/health", func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})
 
-	s.userService = user.NewService(publicAPI, db, logger)
-
-	var pub task.Publisher
-	pub = &task.LogPublisher{Logger: logger}
-	if rabbitCh != nil {
-		not, err := serverAmqp.NewService(rabbitCh, logger, "tasks")
-		if err != nil {
-			return nil, err
-		}
-		s.notificationService = not
-		pub = &serverAmqp.Publisher{RabbitChannel: rabbitCh, Logger: logger, NotificationsQueue: "tasks"}
-	}
-	s.tasksService = task.NewService(authorizedAPI, s.userService, db, pub, logger, key)
-
-	return s, nil
+	s.userService.SetupRoutes(publicAPI)
+	s.tasksService.SetupRoutes(privateAPI)
 }
 
 func (s *SwordChallengeServer) RunMigrations() error {
@@ -81,7 +88,9 @@ func (s *SwordChallengeServer) RunMigrations() error {
 }
 
 func (s *SwordChallengeServer) StartWithGracefulShutdown(ctx context.Context, port int) error {
-	s.notificationService.StartConsumer()
+	if s.notificationService != nil {
+		s.notificationService.StartConsumer()
+	}
 
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -104,9 +113,11 @@ func (s *SwordChallengeServer) StartWithGracefulShutdown(ctx context.Context, po
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err := s.notificationService.Shutdown()
-	if err != nil {
-		s.logger.Errorw("Failed to shut down RabbitMQ connection", "error", err)
+	if s.notificationService != nil {
+		err := s.notificationService.Shutdown()
+		if err != nil {
+			s.logger.Errorw("Failed to shut down RabbitMQ connection", "error", err)
+		}
 	}
 
 	if err := s.server.Shutdown(ctx); err != nil {

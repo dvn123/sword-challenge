@@ -53,6 +53,8 @@ Starting server and all dependencies:
 docker-compose up --build
 ```
 
+The application will create 2 users on startup, user with ID 1 is admin and the one with ID 2 is a technician.
+
 ### Demo
 
 Login
@@ -111,6 +113,7 @@ The queue is declared by the server on startup.
 * APIs should return an error object with details when an error occurs
 * Do a general observability check, we have some logs already but would add traces and metrics
 * Add Swagger/OpenAPI spec
+* Support encryption key rotation
 
 ### Tests
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
@@ -38,15 +39,18 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	ctx := context.Background()
 	container, channel := startRabbitTestContainer(ctx)
 	s.rabbitContainer = &container
-	server, _ := NewServer(sqlx.NewDb(db, "mysql"), logger.Sugar(), router, channel, "6368616e676520746869732070617373")
+	server, _ := NewServer(sqlx.NewDb(db, "mysql"), logger.Sugar(), router, channel, "6368616e676520746869732070617373", "tasks")
 
 	server.notificationService.StartConsumer()
 	s.s = httptest.NewServer(server.router)
 }
 
 func (s *IntegrationTestSuite) TearDownSuite() {
-	(*s.rabbitContainer).Terminate(context.Background())
-	s.db.Close()
+	err := (*s.rabbitContainer).Terminate(context.Background())
+	if err != nil {
+		fmt.Println("RabbitMQ container couldn't be shutdown after testing")
+	}
+	_ = s.db.Close()
 }
 
 func (s *IntegrationTestSuite) TestNoficationsAreConsumedWhenTaskIsCompleted() {

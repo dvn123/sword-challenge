@@ -7,8 +7,15 @@ import (
 )
 
 func TestShouldInitializeService(t *testing.T) {
+	service := NewService(nil, nil, nil, nil, "6368616e676520746869732070617373")
+	assert.NotNil(t, service)
+}
+
+func TestShouldInitializeRoutes(t *testing.T) {
 	c := gin.New()
 	group := c.Group("")
-	NewService(group, nil, nil, nil, nil, "6368616e676520746869732070617373")
+	service := NewService(nil, nil, nil, nil, "6368616e676520746869732070617373")
+	service.SetupRoutes(group)
+	assert.NotNil(t, service)
 	assert.Equal(t, 4, len(c.Routes()))
 }

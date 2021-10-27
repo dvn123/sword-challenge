@@ -11,6 +11,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	serverAmqp "sword-challenge/internal/amqp"
+	"sword-challenge/internal/task"
+	"sword-challenge/internal/user"
 	"sword-challenge/internal/util"
 	"testing"
 	"time"
@@ -29,11 +32,24 @@ func TestAuth(t *testing.T) {
 
 	logger := zap.NewNop()
 	router := gin.New()
+	sqlxDB := sqlx.NewDb(db, "mysql")
 
-	server, err := NewServer(sqlx.NewDb(db, "mysql"), logger.Sugar(), router, nil, "6368616e676520746869732070617373")
-	if err != nil {
-		t.Fatal(err)
+	pub := &serverAmqp.Publisher{Logger: logger.Sugar(), NotificationsQueue: "tasks"}
+	userService := user.NewService(sqlxDB, logger.Sugar())
+
+	tasksService := task.NewService(userService, sqlxDB, pub, logger.Sugar(), "6368616e676520746869732070617373")
+
+	server := &SwordChallengeServer{
+		router:              router,
+		server:              nil,
+		db:                  sqlxDB,
+		logger:              logger.Sugar(),
+		userService:         userService,
+		tasksService:        tasksService,
+		notificationService: nil,
 	}
+	server.SetupRoutes()
+
 	s := httptest.NewServer(server.router)
 	t.Cleanup(s.Close)
 

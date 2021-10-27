@@ -10,6 +10,8 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.uber.org/zap"
+	"sword-challenge/internal/task"
+	"sword-challenge/internal/user"
 	"testing"
 	"time"
 )
@@ -19,12 +21,23 @@ func TestStartAndStopServer(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 
 	router := gin.New()
+	sqlxDB := sqlx.NewDb(db, "mysql")
 
+	pub := &task.LogPublisher{Logger: logger.Sugar()}
+	userService := user.NewService(sqlxDB, logger.Sugar())
+
+	tasksService := task.NewService(userService, sqlxDB, pub, logger.Sugar(), "6368616e676520746869732070617373")
+
+	server := &SwordChallengeServer{
+		router:       router,
+		server:       nil,
+		db:           sqlxDB,
+		logger:       logger.Sugar(),
+		userService:  userService,
+		tasksService: tasksService,
+	}
+	server.SetupRoutes()
 	ctx, cancel := context.WithCancel(context.Background())
-	container, rabbitChan := startRabbitTestContainer(ctx)
-	t.Cleanup(func() { container.Terminate(ctx) })
-
-	server, _ := NewServer(sqlx.NewDb(db, "mysql"), logger.Sugar(), router, rabbitChan, "6368616e676520746869732070617373")
 
 	go func() {
 		err := server.StartWithGracefulShutdown(ctx, 9090)
